@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+.env*
+!.env.example
+.vercel/
+*.tsbuildinfo
+*-debug.log*
+.firebase/
+playwright-report/
+test-results/
+.tools/
+.pnpm-store/

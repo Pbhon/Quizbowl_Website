@@ -1,0 +1,211 @@
+# QuizBowl checklist: GPT-6.1 Sol reasoning recommendations
+
+Use Low for routine UI and established patterns, Medium for ordinary integrations and feature logic, and High for security, concurrency, data correctness, and unfamiliar formats. These are task-specific recommendations, not official ratings.
+
+The labels describe implementation effort assuming the database schema, permissions, and API contracts are already agreed. Use High once to design those foundations; then follow the item labels. Low UI work still uses the established authorization rules.
+
+Extra High (xhigh): reserve for a stubborn bug involving several systems, a difficult concurrency failure, or a final cross-system architecture/security review. Max: no checklist item needs it as a starting setting. If your app exposes Ultra, do not start there for this project.
+
+Keep each request to one coherent feature, reuse existing components, specify acceptance criteria, and request a concise completion report. Escalate when a task exposes deeper uncertainty; higher effort does not replace tests or source verification.
+
+These labels select the coding assistant effort; they do not select the Gemini model used inside the app.
+
+Official references: [GPT-6.1 Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol) and [Reasoning effort](https://developers.openai.com/api/docs/guides/reasoning).
+
+## 1. Project Setup
+- [x] **[Low]** Initialize Next.js with TypeScript
+- [x] **[Low]** Configure Tailwind CSS and shadcn/ui
+- [x] **[Medium]** Set up Firebase Authentication
+- [x] **[Medium]** Set up Cloud Firestore
+- [x] **[Low]** Configure environment variables and API keys
+- [ ] **[Low]** Connect GitHub repository to Vercel
+- [x] **[Low]** Create responsive website layout and navigation
+
+Initialization status (2026-10-08): Firebase project quizbowl-66145 is connected through Git-ignored local environment variables. Email/password Authentication is enabled, local development domains are authorized, and Firestore profile rules/indexes are deployed. Live registration, profile persistence, sign-out, and sign-in were verified with a temporary account; the test account and profile were removed afterward. The GitHub-to-Vercel connection still requires the intended repository and Vercel destination; see README.md for setup steps.
+
+## 2. User Accounts & Authentication
+- [ ] **[Medium]** Student login and registration
+- [ ] **[Medium]** Teacher/Admin login
+- [ ] **[High]** Role-based access permissions
+- [ ] **[Low]** Student profile management
+- [ ] **[High]** Admin-managed student invitations
+- [ ] **[High]** Secure Firebase authentication and database rules
+- [ ] **[Low]** Account settings and preferences
+
+## 3. QBReader Question Practice
+- [ ] **[Medium]** Integrate QBReader API
+- [ ] **[Medium]** Fetch real tossup and bonus questions
+- [ ] **[Low]** Filter questions by difficulty (0–10)
+- [ ] **[Low]** Filter questions by category and subcategory
+- [ ] **[Medium]** Filter questions by specific topics
+- [ ] **[Low]** Select number of questions per session
+- [ ] **[Medium]** Support progressively revealed tossups
+- [ ] **[High]** Implement buzzing and typed responses
+- [ ] **[High]** Validate answers using QBReader answer checking
+- [ ] **[Low]** Display original answer lines and accepted alternatives
+- [ ] **[Medium]** Support multi-part bonus questions
+- [ ] **[Medium]** Track correct, incorrect, and skipped responses
+- [ ] **[Medium]** Avoid previously answered questions when requested
+- [ ] **[High]** Save all question attempts to Firebase
+- [ ] **[Low]** Display practice session summaries
+
+## 4. Student Dashboard & Statistics
+- [ ] **[Low]** Display total questions attempted
+- [ ] **[Medium]** Track correct and incorrect questions
+- [ ] **[Low]** Calculate overall accuracy
+- [ ] **[Medium]** Show accuracy by category and subcategory
+- [ ] **[Medium]** Show performance by difficulty
+- [ ] **[Medium]** Track questions attempted daily, weekly, and monthly
+- [ ] **[Medium]** Visualize progress with interactive charts
+- [ ] **[Low]** Display recent practice sessions
+- [ ] **[Low]** Show upcoming assignments and competitions
+- [ ] **[Medium]** Recommend weak subjects for additional practice
+
+## 5. Question History
+- [ ] **[Low]** Display the 30 most recent question attempts
+- [ ] **[Medium]** Save complete attempt history in Firestore
+- [ ] **[Low]** Filter history by subject and difficulty
+- [ ] **[Low]** Filter correct and incorrect responses
+- [ ] **[Low]** Display submitted answers and official answer lines
+- [ ] **[Medium]** Retry previously missed questions
+- [ ] **[Medium]** Add questions from history to decks
+- [ ] **[High]** Prevent duplicate history submissions
+
+## 6. Custom Study Decks
+- [ ] **[Medium]** Create, rename, edit, and delete decks
+- [ ] **[Medium]** Create topic-based study decks
+- [ ] **[Medium]** Create saved-question study decks
+- [ ] **[Medium]** Create a default Starred Questions deck
+- [ ] **[Medium]** Star questions directly from the practice reader
+- [ ] **[Medium]** Add questions to one or multiple decks
+- [ ] **[Medium]** Save original QBReader questions and answer lines
+- [ ] **[Low]** Support custom topic tags
+- [ ] **[Low]** Browse and search saved cards
+- [ ] **[Low]** Flip through full-question flashcards
+- [ ] **[Low]** Edit or remove saved cards
+- [ ] **[High]** Support private and team-shared decks
+
+## 7. AI Identifier & Flashcard Generation
+- [ ] **[Medium]** Integrate Gemini API free tier
+- [ ] **[High]** Trigger AI only when a question is starred or added to a deck
+- [ ] **[High]** Never call AI during ordinary question fetching or answering
+- [ ] **[High]** Never call AI just to reveal an existing answer line
+- [ ] **[High]** Check Firebase cache before every AI generation
+- [ ] **[Medium]** Generate simple/giveaway identifiers
+- [ ] **[Medium]** Generate intermediate identifiers
+- [ ] **[Medium]** Generate complex/early-buzzer identifiers
+- [ ] **[High]** Convert individual clues into self-contained flashcards
+- [ ] **[High]** Preserve the official QBReader answer line for each clue
+- [ ] **[High]** Include original source excerpts for verification
+- [ ] **[Medium]** Classify clues by complexity
+- [ ] **[Low]** Allow students to preview and edit generated cards
+- [ ] **[Low]** Allow students to remove inaccurate clues
+- [ ] **[High]** Cache generated clues for reuse across students
+- [ ] **[High]** Prevent simultaneous duplicate AI generation requests
+- [ ] **[Medium]** Track generation status: pending, generating, completed, failed
+- [ ] **[High]** Handle API rate limits and generation failures
+- [ ] **[High]** Set per-student AI generation quotas
+- [ ] **[High]** Support manual retry or regeneration when needed
+
+## 8. Anki Integration
+- [ ] **[High]** Export custom decks to Anki APKG format
+- [ ] **[Low]** Support CSV export
+- [ ] **[Medium]** Export full tossup question cards
+- [ ] **[Medium]** Export individual AI-generated identifier cards
+- [ ] **[Low]** Allow export by category and difficulty
+- [ ] **[Low]** Allow export by clue complexity
+- [ ] **[Medium]** Preserve official answer lines and question formatting
+- [ ] **[Low]** Include category, subcategory, and topic tags
+- [ ] **[Low]** Include tournament/source information when available
+- [ ] **[High]** Use stable Anki note identifiers to reduce duplicates
+- [ ] **[Low]** Allow students to download and import exported decks
+- [ ] **[High]** Test Anki exports for formatting and duplicate handling
+
+## 9. Teacher/Admin Dashboard
+- [ ] **[Medium]** Display all authorized team members
+- [ ] **[Medium]** View individual student statistics
+- [ ] **[Medium]** Track total questions attempted per student
+- [ ] **[Medium]** Track correct and incorrect attempts
+- [ ] **[Medium]** Compare accuracy across subjects and difficulties
+- [ ] **[Medium]** Show daily, weekly, and monthly practice activity
+- [ ] **[Low]** Visualize performance trends
+- [ ] **[Low]** Create subject-by-difficulty heatmaps
+- [ ] **[Medium]** Identify weak topics and areas for improvement
+- [ ] **[Medium]** Monitor student participation
+- [ ] **[Low]** View assignment completion
+- [ ] **[Medium]** Track student deck and review activity
+- [ ] **[Low]** Export individual and team statistics to CSV
+
+## 10. Teacher Assignments & Shared Decks
+- [ ] **[Medium]** Create practice assignments
+- [ ] **[Medium]** Assign work to individual students
+- [ ] **[Medium]** Assign work to student groups or the entire team
+- [ ] **[Low]** Set question counts and difficulty ranges
+- [ ] **[Low]** Set category, subcategory, and topic requirements
+- [ ] **[Low]** Set assignment deadlines
+- [ ] **[High]** Automatically track assignment progress
+- [ ] **[Low]** View student completion and performance
+- [ ] **[Medium]** Create teacher-curated study decks
+- [ ] **[High]** Share teacher decks with students
+- [ ] **[Medium]** Allow students to practice and export shared decks
+- [ ] **[High]** Prevent unauthorized edits to teacher-created decks
+
+## 11. Team Calendar & Announcements
+- [ ] **[Medium]** Build a shared team calendar
+- [ ] **[Medium]** Allow admins to create and edit events
+- [ ] **[Low]** Add competition and tournament dates
+- [ ] **[Low]** Add team practice schedules
+- [ ] **[Medium]** Add assignment deadlines
+- [ ] **[Low]** Add tournament locations and descriptions
+- [ ] **[Low]** Allow students to view team events
+- [ ] **[Medium]** Support optional event RSVPs
+- [ ] **[Low]** Display upcoming events on dashboards
+- [ ] **[Low]** Create team announcements
+- [ ] **[Medium]** Add optional calendar export or synchronization
+
+## 12. Firebase Database & Backend
+- [ ] **[Medium]** Create user profile collections
+- [ ] **[High]** Create secure student attempt history collections
+- [ ] **[Medium]** Create study deck and saved-card collections
+- [ ] **[High]** Create AI-generated clue cache
+- [ ] **[High]** Create daily statistics summaries
+- [ ] **[Medium]** Create practice session records
+- [ ] **[Medium]** Create assignments and progress collections
+- [ ] **[Medium]** Create calendar and announcement collections
+- [ ] **[Medium]** Build Next.js API routes for QBReader
+- [ ] **[High]** Build server-side answer validation and attempt recording
+- [ ] **[High]** Build secure AI generation endpoint
+- [ ] **[High]** Build Anki export endpoint
+- [ ] **[High]** Implement API caching and rate limiting
+- [ ] **[High]** Implement Firestore security rules and role checks
+- [ ] **[High]** Protect API keys and admin credentials
+- [ ] **[High]** Implement duplicate submission prevention
+- [ ] **[High]** Handle student data privacy and retention
+- [ ] **[Medium]** Review QBReader question reuse and attribution requirements
+
+## 13. Testing & Deployment
+- [ ] **[Medium]** Test student and admin authentication
+- [ ] **[High]** Test role-based permissions and data isolation
+- [ ] **[Medium]** Test QBReader filters and question retrieval
+- [ ] **[High]** Test answer checking and scoring
+- [ ] **[High]** Test question history and statistics accuracy
+- [ ] **[Medium]** Test starring and deck creation
+- [ ] **[High]** Verify AI runs only after starring or saving
+- [ ] **[High]** Verify cached clues do not trigger repeated AI calls
+- [ ] **[High]** Test generated clue quality and validation
+- [ ] **[High]** Test Anki APKG and CSV imports
+- [ ] **[Medium]** Test calendar and assignment functionality
+- [ ] **[Low]** Test responsive layouts on desktop and mobile
+- [ ] **[High]** Test Firebase and AI usage limits
+- [ ] **[Low]** Deploy production website to Vercel
+- [ ] **[Low]** Set up error logging and basic monitoring
+
+## 14. Future Improvements
+- [ ] **[High]** Spaced repetition scheduling
+- [ ] **[High]** Adaptive question recommendations
+- [ ] **[Medium]** Answerline Explorer for recurring clues
+- [ ] **[High]** Live multiplayer quizbowl practice rooms
+- [ ] **[High]** Real-time buzzing and team scoring
+- [ ] **[Medium]** AI explanations for difficult clues
+- [ ] **[High]** Anki review progress synchronization
+- [ ] **[High]** Optional support for multiple school teams

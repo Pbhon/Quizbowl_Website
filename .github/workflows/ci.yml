@@ -1,0 +1,28 @@
+name: Project checks
+on:
+  push:
+  pull_request:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: pnpm test:rules
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      - run: pnpm exec firebase emulators:exec --project demo-quizbowl --only auth,firestore "pnpm test:e2e"
+        env:
+          E2E_FIREBASE: 'true'
