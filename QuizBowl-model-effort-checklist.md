@@ -147,7 +147,7 @@ Questions stays private. No AI generation is added.
 ## 8. Anki Integration
 - [ ] **[High]** Export custom decks to Anki APKG format
 - [x] **[Low]** Support CSV export
-- [ ] **[Medium]** Export full tossup question cards
+- [x] **[Medium]** Export full tossup question cards
 - [ ] **[Medium]** Export individual AI-generated identifier cards
 - [ ] **[Low]** Allow export by category and difficulty
 - [ ] **[Low]** Allow export by clue complexity
