@@ -268,6 +268,16 @@ test("private/team visibility, owner-only edits, school isolation and revocation
         exact: true,
       }),
     });
+    await expect(
+      peerDeck.getByRole("button", { name: "Study flashcards" }),
+    ).toBeHidden();
+    await peerDeck
+      .locator("summary")
+      .filter({ hasText: "School review" })
+      .click();
+    await expect(
+      peerDeck.getByRole("button", { name: "Study flashcards" }),
+    ).toBeVisible();
     await expect(peerDeck).toContainText("Read-only");
     await expect(
       peerDeck.getByRole("button", { name: "Edit deck", exact: true }),
@@ -326,6 +336,10 @@ test("private/team visibility, owner-only edits, school isolation and revocation
     const ownerDeck = page.locator('[data-slot="card"]').filter({
       has: page.getByRole("heading", { name: "School review", exact: true }),
     });
+    await ownerDeck
+      .locator("summary")
+      .filter({ hasText: "School review" })
+      .click();
     await ownerDeck
       .getByRole("button", { name: "Edit deck", exact: true })
       .click();

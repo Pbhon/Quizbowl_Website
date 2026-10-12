@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { User } from "firebase/auth";
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { useAuth } from "./auth-provider";
 import { AccountGuard } from "./account-guard";
 import { Button } from "./ui/button";
@@ -526,110 +527,122 @@ function DeckPanel({
     }
   }
   return (
-    <Card>
-      <CardContent className="space-y-4">
-        <h2 className="text-xl font-semibold break-words">{deck.name}</h2>
-        <p className="text-sm text-muted-foreground">
-          {deck.visibility === "team"
-            ? `Shared with ${deck.teamName}`
-            : "Private · Only you can access this deck"}
-          {!deck.canEdit &&
-            " · Read-only; you can copy cards to your own decks."}
-        </p>
-        {deck.description && <p className="break-words">{deck.description}</p>}
-        <p className="text-sm text-muted-foreground">
-          {deck.cards.length} saved questions
-          {search && ` · ${cards.length} matching`}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {deck.tags.map((tag) => (
-            <span className="badge" key={tag}>
-              {tag}
-            </span>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {deck.canEdit && (
-            <Button variant="outline" onClick={() => setEditing(!editing)}>
-              Edit deck
-            </Button>
+    <Card className="gap-0 py-0">
+      <details className="group/deck">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-6 py-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+          <h2 className="min-w-0 text-lg font-semibold break-words">
+            {deck.name}
+          </h2>
+          <ChevronDown
+            aria-hidden="true"
+            className="size-5 shrink-0 text-muted-foreground transition-transform group-open/deck:rotate-180"
+          />
+        </summary>
+        <CardContent className="space-y-4 pb-6">
+          <p className="text-sm text-muted-foreground">
+            {deck.visibility === "team"
+              ? `Shared with ${deck.teamName}`
+              : "Private · Only you can access this deck"}
+            {!deck.canEdit &&
+              " · Read-only; you can copy cards to your own decks."}
+          </p>
+          {deck.description && (
+            <p className="break-words">{deck.description}</p>
           )}
-          <Button
-            variant="outline"
-            disabled={!cards.length}
-            onClick={() => setStudying(!studying)}
-          >
-            {studying ? "Close flashcards" : "Study flashcards"}
-          </Button>
-          {deck.canEdit && deck.id !== "starred" && (
-            <Button variant="ghost" onClick={() => setDeleting(!deleting)}>
-              Delete deck
-            </Button>
-          )}
-        </div>
-        <DeckExport deck={deck} user={user} />
-        {deleting && (
-          <div className="space-y-2 rounded-lg border p-3">
-            <p>
-              Delete “{deck.name}” and all its saved cards? This cannot be
-              undone.
-            </p>
-            <div className="flex gap-2">
-              <Button disabled={busy} onClick={() => void remove()}>
-                Confirm delete deck
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setDeleting(false)}
-                disabled={busy}
-              >
-                Cancel
-              </Button>
-            </div>
+          <p className="text-sm text-muted-foreground">
+            {deck.cards.length} saved questions
+            {search && ` · ${cards.length} matching`}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {deck.tags.map((tag) => (
+              <span className="badge" key={tag}>
+                {tag}
+              </span>
+            ))}
           </div>
-        )}
-        {error && <Notice error>{error}</Notice>}
-        {editing && (
-          <DeckEditor
-            key={JSON.stringify([
-              deck.name,
-              deck.description,
-              deck.tags,
-              deck.visibility,
-            ])}
-            deck={deck}
-            user={user}
-            done={() => {
-              setEditing(false);
-              refresh();
-            }}
-          />
-        )}
-        {studying && cards.length > 0 && (
-          <Flashcards
-            key={`${search}:${cards.map((card) => card.id).join(",")}`}
-            cards={cards}
-          />
-        )}
-        {!cards.length && (
-          <Notice>
-            {deck.cards.length
-              ? "No cards match your search."
-              : "Add questions from practice or history to start studying."}
-          </Notice>
-        )}
-        {cards.map((card) => (
-          <SavedCardPanel
-            key={card.id}
-            card={card}
-            deckId={deck.id}
-            canEdit={deck.canEdit}
-            sharedId={deck.sharedId}
-            user={user}
-            refresh={refresh}
-          />
-        ))}
-      </CardContent>
+          <div className="flex flex-wrap gap-2">
+            {deck.canEdit && (
+              <Button variant="outline" onClick={() => setEditing(!editing)}>
+                Edit deck
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              disabled={!cards.length}
+              onClick={() => setStudying(!studying)}
+            >
+              {studying ? "Close flashcards" : "Study flashcards"}
+            </Button>
+            {deck.canEdit && deck.id !== "starred" && (
+              <Button variant="ghost" onClick={() => setDeleting(!deleting)}>
+                Delete deck
+              </Button>
+            )}
+          </div>
+          <DeckExport deck={deck} user={user} />
+          {deleting && (
+            <div className="space-y-2 rounded-lg border p-3">
+              <p>
+                Delete “{deck.name}” and all its saved cards? This cannot be
+                undone.
+              </p>
+              <div className="flex gap-2">
+                <Button disabled={busy} onClick={() => void remove()}>
+                  Confirm delete deck
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleting(false)}
+                  disabled={busy}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+          {error && <Notice error>{error}</Notice>}
+          {editing && (
+            <DeckEditor
+              key={JSON.stringify([
+                deck.name,
+                deck.description,
+                deck.tags,
+                deck.visibility,
+              ])}
+              deck={deck}
+              user={user}
+              done={() => {
+                setEditing(false);
+                refresh();
+              }}
+            />
+          )}
+          {studying && cards.length > 0 && (
+            <Flashcards
+              key={`${search}:${cards.map((card) => card.id).join(",")}`}
+              cards={cards}
+            />
+          )}
+          {!cards.length && (
+            <Notice>
+              {deck.cards.length
+                ? "No cards match your search."
+                : "Add questions from practice or history to start studying."}
+            </Notice>
+          )}
+          {cards.map((card) => (
+            <SavedCardPanel
+              key={card.id}
+              card={card}
+              deckId={deck.id}
+              canEdit={deck.canEdit}
+              sharedId={deck.sharedId}
+              user={user}
+              refresh={refresh}
+            />
+          ))}
+        </CardContent>
+      </details>
     </Card>
   );
 }

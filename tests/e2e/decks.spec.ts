@@ -73,6 +73,29 @@ test("decks: topic import, stars, multiple destinations, edits, flashcards and o
     let deck = page.locator('[data-slot="card"]').filter({
       has: page.getByRole("heading", { name: "Biology topics", exact: true }),
     });
+    const deckToggle = deck
+      .locator("summary")
+      .filter({ hasText: "Biology topics" });
+    await expect(deckToggle).toBeVisible();
+    await expect(
+      deck.getByRole("button", { name: "Study flashcards" }),
+    ).toBeHidden();
+    await expect(
+      deck.locator("summary").filter({ hasText: "Difficulty 4" }),
+    ).toBeHidden();
+    await deckToggle.focus();
+    await page.keyboard.press("Enter");
+    await expect(
+      deck.getByRole("button", { name: "Study flashcards" }),
+    ).toBeVisible();
+    await expect(
+      deck.locator("summary").filter({ hasText: "Difficulty 4" }),
+    ).toBeVisible();
+    await deckToggle.click();
+    await expect(
+      deck.getByRole("button", { name: "Study flashcards" }),
+    ).toBeHidden();
+    await deckToggle.click();
     await expect(deck).toContainText("1 saved questions");
     await deck.getByText("Export to Anki", { exact: true }).click();
     await deck.getByLabel("Export difficulty").selectOption("0");
@@ -221,6 +244,10 @@ test("decks: topic import, stars, multiple destinations, edits, flashcards and o
         exact: true,
       }),
     });
+    await starred
+      .locator("summary")
+      .filter({ hasText: "Starred Questions" })
+      .click();
     await expect(starred).toContainText("1 saved questions");
     await page.unroute("**/api/practice/questions");
     await page.route("**/api/practice/questions", (route) =>
@@ -338,6 +365,7 @@ test("decks: topic import, stars, multiple destinations, edits, flashcards and o
     const second = page.locator('[data-slot="card"]').filter({
       has: page.getByRole("heading", { name: "Second deck", exact: true }),
     });
+    await second.locator("summary").filter({ hasText: "Second deck" }).click();
     await expect(second).toContainText("1 saved questions");
     await second.locator("summary").filter({ hasText: "Difficulty 4" }).click();
     await second
