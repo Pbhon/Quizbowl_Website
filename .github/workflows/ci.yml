@@ -20,6 +20,7 @@ jobs:
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm typecheck
+      - run: pnpm test:accounts
       - run: pnpm test:practice
       - run: pnpm test:statistics
       - run: pnpm test:history

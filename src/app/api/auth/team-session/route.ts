@@ -34,8 +34,25 @@ export async function POST(request: Request) {
     let account;
     try {
       account = await auth.verifyIdToken(token, true);
-    } catch {
-      return reply({ message: "Your session expired. Sign in again." }, 401);
+    } catch (error) {
+      const code = (error as { code?: string }).code || "unknown";
+      console.error("School token verification failed:", code);
+      const invalidSession = [
+        "auth/id-token-expired",
+        "auth/id-token-revoked",
+        "auth/invalid-id-token",
+        "auth/argument-error",
+        "auth/user-disabled",
+        "auth/user-not-found",
+      ].includes(code);
+      return reply(
+        {
+          message: invalidSession
+            ? "Your session expired. Sign in again."
+            : "School authentication is unavailable. Check the server's Firebase credentials.",
+        },
+        invalidSession ? 401 : 503,
+      );
     }
     const member = db.doc(`teams/${team.id}/members/${account.uid}`);
     const school = db.doc(`teams/${team.id}`);

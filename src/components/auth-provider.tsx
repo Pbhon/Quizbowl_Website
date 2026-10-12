@@ -78,7 +78,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 Authorization: "Bearer " + (await current.getIdToken()),
               },
             });
-            if (!response.ok) throw new Error("School membership unavailable");
+            if (!response.ok) {
+              const failure = await response.json();
+              throw new Error(
+                failure.message ||
+                  "School membership unavailable. Please retry.",
+              );
+            }
             const { teamId: schoolId } = await response.json();
             if (ticket !== generation) return;
             let profile: Profile | null = null;
@@ -152,13 +158,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 failed,
               ),
             ];
-          } catch {
+          } catch (error) {
             if (ticket === generation)
               setSession({
                 ...emptySession,
                 user: current,
                 error:
-                  "Your school workspace could not be loaded. Check your connection, then retry.",
+                  error instanceof Error
+                    ? error.message
+                    : "Your school workspace could not be loaded. Check your connection, then retry.",
               });
           }
         },
