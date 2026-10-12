@@ -251,6 +251,17 @@ test("private/team visibility, owner-only edits, school isolation and revocation
     await signIn(page, owner.email!);
     await signIn(peerPage, peer.email!);
     await peerPage.goto("/decks");
+    await expect(peerPage.getByLabel("Show decks")).toHaveValue("private");
+    await expect(
+      peerPage.getByRole("heading", { name: "Starred Questions", exact: true }),
+    ).toBeVisible();
+    await expect(
+      peerPage.getByRole("heading", { name: "School review", exact: true }),
+    ).toHaveCount(0);
+    await peerPage.getByLabel("Show decks").selectOption("team");
+    await expect(
+      peerPage.getByRole("heading", { name: "Starred Questions", exact: true }),
+    ).toHaveCount(0);
     const peerDeck = peerPage.locator('[data-slot="card"]').filter({
       has: peerPage.getByRole("heading", {
         name: "School review",
@@ -304,6 +315,14 @@ test("private/team visibility, owner-only edits, school isolation and revocation
     ).toBe(true);
     // The owner can change visibility in the UI and remove the live share pointer.
     await page.goto("/decks");
+    await expect(page.getByLabel("Show decks")).toHaveValue("private");
+    await expect(
+      page.getByRole("heading", { name: "Legacy private", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "School review", exact: true }),
+    ).toHaveCount(0);
+    await page.getByLabel("Show decks").selectOption("team");
     const ownerDeck = page.locator('[data-slot="card"]').filter({
       has: page.getByRole("heading", { name: "School review", exact: true }),
     });
@@ -312,6 +331,12 @@ test("private/team visibility, owner-only edits, school isolation and revocation
       .click();
     await ownerDeck.getByLabel("Deck visibility").selectOption("private");
     await ownerDeck.getByRole("button", { name: "Save deck changes" }).click();
+    await expect(ownerDeck).toHaveCount(0);
+    await expect(page.getByLabel("Show decks")).toHaveValue("team");
+    await expect(
+      page.getByText("No public decks are shared with your team yet."),
+    ).toBeVisible();
+    await page.getByLabel("Show decks").selectOption("private");
     await expect(ownerDeck).toContainText("Private · Only you");
     const directoryRef = db.doc(
       `teams/team-e2e/sharedDecks/${shared.sharedId}`,
@@ -326,6 +351,14 @@ test("private/team visibility, owner-only edits, school isolation and revocation
     await expect(
       peerPage.getByRole("heading", { name: "School review" }),
     ).toHaveCount(0);
+    await expect(peerPage.getByLabel("Show decks")).toHaveValue("team");
+    await expect(
+      peerPage.getByText("No public decks are shared with your team yet."),
+    ).toBeVisible();
+    await peerPage.getByLabel("Show decks").selectOption("private");
+    await expect(
+      peerPage.getByRole("heading", { name: "Starred Questions", exact: true }),
+    ).toBeVisible();
     expect(
       (
         await peerApi.post({

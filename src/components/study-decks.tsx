@@ -223,6 +223,8 @@ function DeckWorkspace({ user }: { user: User }) {
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [visibility, setVisibility] =
+    useState<StudyDeck["visibility"]>("private");
   useEffect(() => {
     const controller = new AbortController();
     deckRequest(user, undefined, controller.signal)
@@ -238,6 +240,7 @@ function DeckWorkspace({ user }: { user: User }) {
     return () => controller.abort();
   }, [user, revision]);
   const refresh = () => setRevision((n) => n + 1);
+  const visibleDecks = decks?.filter((deck) => deck.visibility === visibility);
   return (
     <div className="space-y-6">
       <CreateDeck user={user} refresh={refresh} />
@@ -249,6 +252,23 @@ function DeckWorkspace({ user }: { user: User }) {
           Refresh decks
         </Button>
       </div>
+      <FormField
+        id="deck-list-visibility"
+        label="Show decks"
+        hint="Public decks are shared with your team."
+      >
+        <select
+          id="deck-list-visibility"
+          className="form-select"
+          value={visibility}
+          onChange={(event) =>
+            setVisibility(event.target.value as StudyDeck["visibility"])
+          }
+        >
+          <option value="private">Private decks</option>
+          <option value="team">Public decks</option>
+        </select>
+      </FormField>
       <FormField
         id="search-cards"
         label="Search saved cards"
@@ -262,7 +282,14 @@ function DeckWorkspace({ user }: { user: User }) {
       </FormField>
       {error && <Notice error>{error}</Notice>}
       {!decks && !error && <Notice>Loading your decks…</Notice>}
-      {decks?.map((deck) => (
+      {visibleDecks?.length === 0 && (
+        <Notice>
+          {visibility === "private"
+            ? "No private decks yet. Create a private deck to get started."
+            : "No public decks are shared with your team yet."}
+        </Notice>
+      )}
+      {visibleDecks?.map((deck) => (
         <DeckPanel
           key={deck.id}
           deck={deck}
