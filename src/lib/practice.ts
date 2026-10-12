@@ -9,6 +9,8 @@ export type Question = {
   parts: string[];
   answers: string[];
   answerLines: string[];
+  formattedParts?: string[];
+  formattedLeadin?: string;
 };
 export type Outcome = "correct" | "incorrect" | "skipped";
 export type Attempt = {
@@ -94,5 +96,14 @@ export function normalizeQuestion(
     parts,
     answers,
     answerLines: lines,
+    ...(type === "tossup" && text(raw.question)
+      ? { formattedParts: [text(raw.question)] }
+      : {}),
+    ...(type === "bonus" &&
+    strings(raw.parts) &&
+    raw.parts.length === parts.length
+      ? { formattedParts: raw.parts }
+      : {}),
+    ...(text(raw.leadin) ? { formattedLeadin: text(raw.leadin) } : {}),
   };
 }

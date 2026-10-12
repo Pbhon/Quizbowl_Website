@@ -27,6 +27,32 @@ vm.runInNewContext(
   },
 );
 const { ankiCSV, exportRows } = module.exports;
+test("formatting keeps emphasis and line breaks while escaping active markup and edited text", () => {
+  const formatted = {
+    ...question,
+    formattedParts: [
+      '<b onclick="alert(1)">Cell</b><img src=x onerror=alert(1)>\nNext',
+    ],
+  };
+  const rows = exportRows({
+    ...deck,
+    cards: [{ ...deck.cards[0], originalQuestion: formatted }],
+  });
+  assert.ok(rows[0].front.includes("<b>Cell</b>"));
+  assert.ok(!rows[0].front.includes("<img"));
+  assert.ok(!rows[0].front.includes("<b onclick"));
+  assert.ok(rows[0].front.includes("<br>Next"));
+  const edited = exportRows({
+    ...deck,
+    cards: [
+      {
+        ...deck.cards[0],
+        question: { ...question, parts: ["x < y & z\nnext"] },
+      },
+    ],
+  });
+  assert.equal(edited[0].front, "x &lt; y &amp; z<br>next");
+});
 const question = {
   id: "q",
   type: "tossup",
@@ -85,10 +111,21 @@ test("identifiers export separately with source excerpts and original part answe
   const rows = exportRows(generated, { kind: "identifiers" });
   assert.equal(rows.length, 1);
   assert.equal(rows[0].front, "Which cell carries impulses?");
-  assert.ok(rows[0].back.includes("neuron [accept nerve cell]"));
+  assert.ok(rows[0].back.includes("<b>neuron</b> [accept nerve cell]"));
   assert.ok(rows[0].back.includes("called a neuron"));
-  assert.equal(exportRows(generated, { kind: "identifiers", complexity: "complex" }).length, 0);
-  assert.equal(exportRows(generated, { kind: "identifiers", complexity: "simple", difficulty: "0" }).length, 1);
+  assert.equal(
+    exportRows(generated, { kind: "identifiers", complexity: "complex" })
+      .length,
+    0,
+  );
+  assert.equal(
+    exportRows(generated, {
+      kind: "identifiers",
+      complexity: "simple",
+      difficulty: "0",
+    }).length,
+    1,
+  );
 });
 test("full question rows retain the whole question and original official answer", () => {
   const edited = {
@@ -99,10 +136,13 @@ test("full question rows retain the whole question and original official answer"
   };
   const rows = exportRows(edited);
   assert.equal(rows.length, 1);
-  assert.ok(rows[0].back.includes("neuron [accept nerve cell]"));
+  assert.ok(rows[0].back.includes("<b>neuron</b> [accept nerve cell]"));
 });
 test("category and difficulty filters include difficulty zero and combine", () => {
-  assert.equal(exportRows(deck, { category: "Science", difficulty: "0" }).length, 1);
+  assert.equal(
+    exportRows(deck, { category: "Science", difficulty: "0" }).length,
+    1,
+  );
   assert.equal(exportRows(deck, { category: "History" }).length, 0);
   assert.equal(exportRows(deck, { difficulty: "1" }).length, 0);
 });
