@@ -1,36 +1,73 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { User } from "firebase/auth";
 import type { StudyDeck } from "@/lib/decks";
 import { ankiCSV, exportRows, type ExportOptions } from "@/lib/anki-export";
 import { FormField, Notice } from "./form-field";
 import { Button } from "./ui/button";
 
-export function DeckExport({ deck }: { deck: StudyDeck }) {
+export function DeckExport({ deck, user }: { deck: StudyDeck; user: User }) {
   const [options, setOptions] = useState<ExportOptions>({ kind: "questions" });
   const prefix = `export-${deck.id}`;
   const rows = exportRows(deck, options);
   const [error, setError] = useState("");
-  function download() {
+  const [busy, setBusy] = useState(false);
+  const controller = useRef<AbortController | null>(null);
+  useEffect(() => () => controller.current?.abort(), []);
+  async function download(format: "csv" | "apkg") {
+    if (controller.current) return;
+    const pending = new AbortController();
+    controller.current = pending;
     setError("");
+    setBusy(true);
     let url: string | undefined;
     const anchor = document.createElement("a");
     try {
-      url = URL.createObjectURL(
-        new Blob([ankiCSV(rows)], { type: "text/csv;charset=utf-8" }),
-      );
+      let blob: Blob;
+      if (format === "apkg") {
+        const response = await fetch("/api/decks/export", {
+          method: "POST",
+          signal: pending.signal,
+          headers: {
+            Authorization: `Bearer ${await user.getIdToken()}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ...(deck.sharedId
+              ? { sharedId: deck.sharedId }
+              : { deckId: deck.id }),
+            options,
+          }),
+        });
+        if (!response.ok)
+          throw new Error(
+            (await response.json()).error || "Export failed. Please retry.",
+          );
+        blob = await response.blob();
+      } else
+        blob = new Blob([ankiCSV(rows)], { type: "text/csv;charset=utf-8" });
+      if (pending.signal.aborted) return;
+      url = URL.createObjectURL(blob);
       anchor.href = url;
       anchor.download = `${
         deck.name
           .replace(/[^\p{L}\p{N} _-]/gu, "_")
           .trim()
           .slice(0, 80) || "study-deck"
-      }-${options.kind || "questions"}.csv`;
+      }-${options.kind || "questions"}.${format}`;
       document.body.append(anchor);
       anchor.click();
-    } catch {
-      setError("The CSV could not be downloaded. Please retry.");
+    } catch (failure) {
+      if (!pending.signal.aborted)
+        setError(
+          failure instanceof Error
+            ? failure.message
+            : "The export could not be downloaded. Please retry.",
+        );
     } finally {
+      controller.current = null;
+      if (!pending.signal.aborted) setBusy(false);
       anchor.remove();
       if (url) {
         const downloadURL = url;
@@ -40,9 +77,7 @@ export function DeckExport({ deck }: { deck: StudyDeck }) {
   }
   return (
     <details className="rounded-lg border p-4">
-      <summary className="cursor-pointer font-medium">
-        Export to Anki CSV
-      </summary>
+      <summary className="cursor-pointer font-medium">Export to Anki</summary>
       <div className="mt-4 space-y-4">
         <div className="grid gap-3 sm:grid-cols-3">
           <FormField id={`${prefix}-kind`} label="Export card type">
@@ -122,9 +157,22 @@ export function DeckExport({ deck }: { deck: StudyDeck }) {
           )}
         </div>
         <p role="status">{rows.length} cards match the export filters.</p>
-        <Button disabled={!rows.length} onClick={download}>
-          Download Anki CSV
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            disabled={busy || !rows.length}
+            onClick={() => void download("apkg")}
+          >
+            Download Anki package
+          </Button>
+          <Button
+            variant="outline"
+            disabled={busy || !rows.length}
+            onClick={() => void download("csv")}
+          >
+            Download Anki CSV
+          </Button>
+        </div>
+        {busy && <Notice>Preparing download…</Notice>}
         {error && <Notice error>{error}</Notice>}
         <p className="text-sm text-muted-foreground">
           Export uses all cards in this deck and the filters above. Search in
@@ -137,28 +185,35 @@ export function DeckExport({ deck }: { deck: StudyDeck }) {
         )}
         <details className="text-sm">
           <summary className="cursor-pointer">How to import into Anki</summary>
+          <p className="mt-2">
+            Download an Anki package, then open the APKG in Anki. The QuizBowl
+            v1 note type and card layout are included. To refresh previously
+            imported cards, choose to always update notes; leave learning
+            progress import disabled to keep your reviews.
+          </p>
+          <p className="mt-2 font-medium">CSV alternative</p>
           <ol className="mt-2 list-decimal space-y-2 pl-5">
             <li>
               Download the CSV, then open Anki on your computer and choose File
               → Import.
             </li>
             <li>
-              Select the CSV and choose your destination deck and the Basic note
-              type named QuizBowl v1. Copy Basic, add an ID field, and move ID
-              to the first field; keep the card templates displaying Front and
-              Back.
+              Import an APKG once to install QuizBowl v1, then select that note
+              type and your destination deck when importing CSV. Keep the
+              shipped fields and card template unchanged so CSV and APKG can
+              update the same notes.
             </li>
             <li>
-              Map ID to ID, Front to Front, Back to Back, and Tags to Tags. Use
-              comma separation and enable HTML in fields; current Anki versions
-              read these settings from the file headers.
+              Map ID to ID, Front to Front, Back to Back, Tags to Tags, and GUID
+              to the GUID column. Use comma separation and enable HTML in
+              fields; current Anki versions read these settings from the file
+              headers.
             </li>
             <li>Preview the cards and select Import.</li>
           </ol>
           <p className="mt-2">
-            Keep ID unchanged and select update existing notes with match scope
-            set to note type when importing again. This preserves one note
-            across deck copies and question edits.
+            Keep ID and GUID unchanged when importing again. This preserves one
+            note across deck copies and question edits.
           </p>
           <p className="mt-2">
             Existing decks saved before this feature retain their stored plain

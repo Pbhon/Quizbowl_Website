@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
+import { unzipSync } from "fflate";
 
 const enabled = process.env.E2E_FIREBASE === "true";
 if (enabled) {
@@ -73,7 +74,7 @@ test("decks: topic import, stars, multiple destinations, edits, flashcards and o
       has: page.getByRole("heading", { name: "Biology topics", exact: true }),
     });
     await expect(deck).toContainText("1 saved questions");
-    await deck.getByText("Export to Anki CSV", { exact: true }).click();
+    await deck.getByText("Export to Anki", { exact: true }).click();
     await deck.getByLabel("Export difficulty").selectOption("0");
     await expect(
       deck.getByRole("button", { name: "Download Anki CSV" }),
@@ -94,6 +95,20 @@ test("decks: topic import, stars, multiple destinations, edits, flashcards and o
     expect(csv).toContain("<b>mitochondria</b>");
     expect(csv).toContain("Deck test packet");
     expect(csv).toContain("topic::biology");
+    expect(csv).toContain("#guid column:5");
+    const packageDownload = page.waitForEvent("download");
+    await deck
+      .getByRole("button", { name: "Download Anki package", exact: true })
+      .click();
+    const apkg = await packageDownload;
+    expect(apkg.suggestedFilename()).toBe("Biology topics-questions.apkg");
+    const packageStream = await apkg.createReadStream();
+    const packageChunks = [];
+    for await (const chunk of packageStream!) packageChunks.push(chunk);
+    const archive = unzipSync(Buffer.concat(packageChunks));
+    expect(
+      Buffer.from(archive["collection.anki2"]).subarray(0, 16).toString(),
+    ).toBe("SQLite format 3\x00");
     await deck.getByLabel("Export card type").selectOption("identifiers");
     await expect(deck.getByLabel("Clue complexity")).toBeVisible();
     await expect(
@@ -205,11 +220,42 @@ test("decks: topic import, stars, multiple destinations, edits, flashcards and o
     );
     const { idToken } = await login.json();
     const headers = { Authorization: `Bearer ${idToken}` };
+    expect(
+      (
+        await page.request.post("/api/decks/export", {
+          data: { deckId: cell.id },
+        })
+      ).status(),
+    ).toBe(401);
+    for (const options of [
+      { difficulty: 0 },
+      { difficulty: "11" },
+      { complexity: "invalid" },
+    ]) {
+      expect(
+        (
+          await page.request.post("/api/decks/export", {
+            headers,
+            data: { deckId: cell.id, options },
+          })
+        ).status(),
+      ).toBe(400);
+    }
+    const noMatches = await page.request.post("/api/decks/export", {
+      headers,
+      data: { deckId: cell.id, options: { difficulty: "0" } },
+    });
+    expect(noMatches.status()).toBe(400);
     const outsider = `other-${user.uid}`;
     await db
       .doc(`users/${outsider}/decks/foreign-deck`)
       .set({ name: "Foreign deck" });
     try {
+      const foreignExport = await page.request.post("/api/decks/export", {
+        headers,
+        data: { deckId: "foreign-deck", uid: outsider },
+      });
+      expect(foreignExport.status()).toBe(404);
       for (const action of ["update", "delete", "editCard", "removeCard"]) {
         const response = await page.request.post("/api/decks", {
           headers,

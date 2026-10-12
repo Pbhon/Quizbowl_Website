@@ -7,7 +7,7 @@ import {
   type QuerySnapshot,
 } from "firebase-admin/firestore";
 import type { Question } from "@/lib/practice";
-import { savedIdentifiers } from "@/lib/decks";
+import { savedIdentifiers, type StudyDeck } from "@/lib/decks";
 import { documentId, historyQuestion } from "./history";
 import { PracticeError } from "./practice-persistence";
 import {
@@ -92,12 +92,36 @@ export async function studyDecks(db: Firestore, uid: string) {
   );
   return [...owned, ...shared.filter((deck) => deck !== null)];
 }
+export async function exportDeck(
+  db: Firestore,
+  uid: string,
+  deckId: unknown,
+  sharedId?: unknown,
+) {
+  return db.runTransaction(async (tx) => {
+    const doc =
+      sharedId !== undefined
+        ? await readableShare(db, tx, uid, sharedId)
+        : await tx.get(deckRef(db, uid, deckId));
+    if (!doc.exists) throw new PracticeError("Study deck not found.", 404);
+    const cards = await tx.get(doc.ref.collection("questions").limit(5001));
+    if (cards.size > 5000)
+      throw new PracticeError(
+        "Export decks with up to 5000 saved questions.",
+        413,
+      );
+    return {
+      deck: serializeDeck(doc, cards, sharedId === undefined),
+      key: doc.ref.path,
+    };
+  });
+}
 function serializeDeck(
   doc: DocumentSnapshot,
   snapshot: QuerySnapshot,
   canEdit: boolean,
   sharedId?: string,
-) {
+): StudyDeck {
   const data = doc.data()!;
   const cards = snapshot.docs.map((card) => {
     const saved = card.data();

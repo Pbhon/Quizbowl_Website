@@ -540,7 +540,7 @@ function DeckPanel({
             </Button>
           )}
         </div>
-        <DeckExport deck={deck} />
+        <DeckExport deck={deck} user={user} />
         {deleting && (
           <div className="space-y-2 rounded-lg border p-3">
             <p>

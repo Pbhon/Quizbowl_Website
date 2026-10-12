@@ -150,8 +150,8 @@ test("CSV escapes delimiters, quotes, newlines and keeps Unicode with Anki heade
     { noteId: "id", front: 'a,"b"\nc', back: "日本語", tags: "" },
   ]);
   assert.ok(csv.startsWith("#separator:Comma\r\n#html:true\r\n"));
-  assert.ok(csv.includes('"id","a,""b""\nc","日本語",""\r\n'));
-  assert.equal(ankiCSV([]).split("\r\n").length, 6);
+  assert.ok(csv.includes('"id","a,""b""\nc","日本語","","id"\r\n'));
+  assert.equal(ankiCSV([]).split("\r\n").length, 7);
 });
 test("identifiers export separately with source excerpts and original part answers", () => {
   assert.equal(exportRows(deck, { kind: "identifiers" }).length, 0);

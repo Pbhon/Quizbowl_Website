@@ -101,10 +101,13 @@ export function ankiCSV(rows: ExportRow[]) {
       "#separator:Comma",
       "#html:true",
       "#tags column:4",
+      "#guid column:5",
       `#notetype:${ANKI_NOTE_TYPE}`,
-      "#columns:ID,Front,Back,Tags",
+      "#columns:ID,Front,Back,Tags,GUID",
       ...rows.map((row) =>
-        [row.noteId, row.front, row.back, row.tags].map(quote).join(","),
+        [row.noteId, row.front, row.back, row.tags, row.noteId]
+          .map(quote)
+          .join(","),
       ),
     ].join("\r\n") + "\r\n"
   );
