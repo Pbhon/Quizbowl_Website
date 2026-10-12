@@ -154,3 +154,8 @@ test("exports category, subcategory and deck/card topics as whitespace-safe tags
   assert.ok(tags.includes("topic::neurons"));
   assert.ok(tags.includes("difficulty::0"));
 });
+test("includes available tournament/packet source and handles missing source", () => {
+  assert.ok(exportRows(deck)[0].back.includes("Source: Tournament · Packet 1"));
+  const missing = { ...deck, cards: [{ ...deck.cards[0], originalQuestion: { ...question, source: "" } }] };
+  assert.ok(!exportRows(missing)[0].back.includes("Source:"));
+});
