@@ -2,7 +2,11 @@ import type { StudyDeck } from "./decks";
 import { savedIdentifiers } from "./decks";
 
 export type ExportRow = { front: string; back: string; tags: string };
-export type ExportOptions = { kind?: "questions" | "identifiers" };
+export type ExportOptions = {
+  kind?: "questions" | "identifiers";
+  category?: string;
+  difficulty?: string;
+};
 
 /** UTF-8 CSV with Anki's import headers; headers are comments, never cards. */
 export function ankiCSV(rows: ExportRow[]) {
@@ -24,8 +28,12 @@ export function exportRows(
   deck: StudyDeck,
   options: ExportOptions = {},
 ): ExportRow[] {
+  const cards = deck.cards.filter((card) =>
+    (!options.category || card.originalQuestion.category === options.category) &&
+    (!options.difficulty || String(card.originalQuestion.difficulty) === options.difficulty),
+  );
   if (options.kind === "identifiers")
-    return deck.cards.flatMap((card) =>
+    return cards.flatMap((card) =>
       savedIdentifiers(card.identifiers, card.originalQuestion).map(
         (identifier) => ({
           front: identifier.clue,
@@ -34,7 +42,7 @@ export function exportRows(
         }),
       ),
     );
-  return deck.cards.map((card) => ({
+  return cards.map((card) => ({
     front: [card.question.leadin, ...card.question.parts]
       .filter(Boolean)
       .join("\n\n"),

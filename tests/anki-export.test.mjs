@@ -99,3 +99,8 @@ test("full question rows retain the whole question and original official answer"
   assert.equal(rows.length, 1);
   assert.ok(rows[0].back.includes("neuron [accept nerve cell]"));
 });
+test("category and difficulty filters include difficulty zero and combine", () => {
+  assert.equal(exportRows(deck, { category: "Science", difficulty: "0" }).length, 1);
+  assert.equal(exportRows(deck, { category: "History" }).length, 0);
+  assert.equal(exportRows(deck, { difficulty: "1" }).length, 0);
+});

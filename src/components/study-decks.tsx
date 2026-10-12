@@ -10,6 +10,7 @@ import { Input } from "./ui/input";
 import { Card, CardContent } from "./ui/card";
 import { FormField, Notice } from "./form-field";
 import { matchesCard, type StudyDeck, type SavedCard } from "@/lib/decks";
+import { DeckExport } from "./deck-export";
 
 export async function deckRequest(
   user: User,
@@ -539,6 +540,7 @@ function DeckPanel({
             </Button>
           )}
         </div>
+        <DeckExport deck={deck} />
         {deleting && (
           <div className="space-y-2 rounded-lg border p-3">
             <p>
