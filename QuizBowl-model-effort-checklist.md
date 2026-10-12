@@ -156,16 +156,20 @@ Questions stays private. No AI generation is added.
 - [x] **[Low]** Include tournament/source information when available
 - [x] **[High]** Use stable Anki note identifiers to reduce duplicates
 - [x] **[Low]** Allow students to download and import exported decks
-- [ ] **[High]** Test Anki exports for formatting and duplicate handling
+- [x] **[High]** Test Anki exports for formatting and duplicate handling
 
-Task 8's nine Low/Medium subtasks are complete at `/decks`: download Anki CSV
-for full questions or saved identifier cards, with category/difficulty/complexity
+All twelve Task 8 subtasks are complete at `/decks`. APKG packages and CSV
+support full questions and saved identifier cards, category/difficulty/complexity
 filters, official answers, formatting, subject/topic tags, and source attribution.
-CSV import instructions are included in each deck panel. Task 7 generation is
-still pending; identifier export reads saved results only and makes no AI calls.
-The three High subtasks (APKG, stable note IDs, and Anki application formatting/
-duplicate validation) remain unchecked as requested. Older saved questions retain
-their stored plain text; newly fetched questions also preserve basic formatting.
+Stable source-based note identities are shared across formats and deck copies.
+APKG downloads include the QuizBowl v1 note type; import it once before CSV.
+The export endpoint transactionally checks current ownership or sharing access.
+Anki 26.9.3 backend tests verify rendering, repeated and filtered imports,
+question/clue edits, cross-format updates, and preserved review scheduling.
+Anki uses whole-second APKG revision timestamps; re-download after a second
+if a rapid edit did not refresh a note. Task 7 generation is still pending:
+identifier export reads saved results only and makes no AI calls. Older saved
+questions keep their stored plain text; new questions retain basic formatting.
 
 ## 9. Teacher/Admin Dashboard
 - [ ] **[Medium]** Display all authorized team members

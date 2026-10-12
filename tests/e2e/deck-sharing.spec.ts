@@ -49,6 +49,8 @@ function api(request: APIRequestContext, idToken: string) {
     },
     post: (data: Record<string, unknown>) =>
       request.post("/api/decks", { headers, data }),
+    export: (data: Record<string, unknown>) =>
+      request.post("/api/decks/export", { headers, data }),
   };
 }
 
@@ -147,6 +149,12 @@ test("private/team visibility, owner-only edits, school isolation and revocation
       visibility: "team",
       teamName: "Test High School",
     });
+    const sharedExport = await peerApi.export({ sharedId: shared.sharedId });
+    expect(sharedExport.status()).toBe(200);
+    expect(sharedExport.headers()["cache-control"]).toContain("no-store");
+    expect(
+      (await outsiderApi.export({ sharedId: shared.sharedId })).status(),
+    ).toBe(404);
     expect(shared.cards[0].originalQuestion).toEqual(question);
     expect(
       (await peerApi.get()).some(
@@ -309,6 +317,9 @@ test("private/team visibility, owner-only edits, school isolation and revocation
       `teams/team-e2e/sharedDecks/${shared.sharedId}`,
     );
     expect((await directoryRef.get()).exists).toBe(false);
+    expect((await peerApi.export({ sharedId: shared.sharedId })).status()).toBe(
+      404,
+    );
     // Even a stale directory pointer cannot grant access after unsharing.
     await directoryRef.set({ ownerUid: owner.uid, deckId });
     await peerPage.getByRole("button", { name: "Refresh decks" }).click();
@@ -346,6 +357,9 @@ test("private/team visibility, owner-only edits, school isolation and revocation
       ),
     ).toBe(true);
     await db.doc(`teams/team-e2e/members/${peer.uid}`).delete();
+    expect((await peerApi.export({ sharedId: shared.sharedId })).status()).toBe(
+      404,
+    );
     expect(
       (await peerApi.get()).some(
         (deck: { name: string }) => deck.name === "School review",

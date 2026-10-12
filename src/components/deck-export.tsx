@@ -191,6 +191,10 @@ export function DeckExport({ deck, user }: { deck: StudyDeck; user: User }) {
             imported cards, choose to always update notes; leave learning
             progress import disabled to keep your reviews.
           </p>
+          <p className="mt-2">
+            If a rapid edit does not refresh a note, wait a second and download
+            the package again.
+          </p>
           <p className="mt-2 font-medium">CSV alternative</p>
           <ol className="mt-2 list-decimal space-y-2 pl-5">
             <li>

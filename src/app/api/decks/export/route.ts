@@ -42,7 +42,10 @@ export async function POST(request: Request) {
     const rows = exportRows(deck, options);
     if (!rows.length)
       throw new PracticeError("No saved cards match the export filters.", 400);
-    if (rows.length > 5000 || JSON.stringify(rows).length > 16 * 1024 * 1024)
+    if (
+      rows.length > 5000 ||
+      Buffer.byteLength(JSON.stringify(rows), "utf8") > 16 * 1024 * 1024
+    )
       throw new PracticeError(
         "Export is too large. Choose narrower filters.",
         413,

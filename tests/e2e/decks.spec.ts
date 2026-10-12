@@ -114,6 +114,44 @@ test("decks: topic import, stars, multiple destinations, edits, flashcards and o
     await expect(
       deck.getByRole("button", { name: "Download Anki CSV" }),
     ).toBeDisabled();
+    const importedDeck = (
+      await db.collection(`users/${user.uid}/decks`).get()
+    ).docs.find((doc) => doc.data().name === "Biology topics")!;
+    const importedCard = (await importedDeck.ref.collection("questions").get())
+      .docs[0];
+    await importedCard.ref.update({
+      identifiers: [
+        {
+          id: "biology-identifier",
+          clue: "Which organelle powers the cell?",
+          complexity: "simple",
+          part: 0,
+          sourceExcerpt: "Name the powerhouse.",
+        },
+      ],
+    });
+    await page
+      .getByRole("button", { name: "Refresh decks", exact: true })
+      .click();
+    await expect(deck.getByRole("status")).toContainText("1 cards match");
+    await deck.getByLabel("Clue complexity").selectOption("complex");
+    await expect(
+      deck.getByRole("button", { name: "Download Anki package", exact: true }),
+    ).toBeDisabled();
+    await deck.getByLabel("Clue complexity").selectOption("simple");
+    const identifierDownload = page.waitForEvent("download");
+    await deck
+      .getByRole("button", { name: "Download Anki package", exact: true })
+      .click();
+    const identifierPackage = await identifierDownload;
+    const identifierStream = await identifierPackage.createReadStream();
+    const identifierChunks = [];
+    for await (const chunk of identifierStream!) identifierChunks.push(chunk);
+    const identifierDatabase = Buffer.from(
+      unzipSync(Buffer.concat(identifierChunks))["collection.anki2"],
+    ).toString();
+    expect(identifierDatabase).toContain("Which organelle powers the cell?");
+    expect(identifierDatabase).toContain("<b>mitochondria</b>");
     await deck
       .getByRole("button", { name: "Study flashcards", exact: true })
       .click();

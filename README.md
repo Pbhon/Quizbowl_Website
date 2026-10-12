@@ -439,21 +439,35 @@ On this machine the default Turbopack production build can fail while launching
 its CSS compiler. The documented Next.js fallback is
 `node node_modules/next/dist/bin/next build --webpack`, which passes.
 
-## Anki CSV exports (Task 8)
+## Anki exports (Task 8)
 
-Open **Export to Anki CSV** on any accessible deck at `/decks`, including
+Open **Export to Anki** on any accessible deck at `/decks`, including
 team-shared decks. Choose full questions or saved AI identifiers, filter by
 category and difficulty (0–10), and optionally filter identifiers by complexity.
-The matching card count controls whether **Download Anki CSV** is enabled.
+The matching card count controls the APKG and CSV download buttons.
 Deck-browser search does not affect exports. Full bonuses include their lead-in
 and every part; full tossups export as one card. Study question edits are exported,
 while answers always come from the saved original QBReader question.
 
-Files use UTF-8, quoted CSV fields, and Anki headers for comma separation, HTML,
-Front/Back column names, and the Tags column. Import with Anki's Basic note type,
-map Front/Back/Tags, enable HTML, and choose the destination deck. Instructions
-are also available inside each export panel. See the
-[official Anki text import guide](https://docs.ankiweb.net/manual/importing/text-files).
+APKG downloads contain a schema-11 SQLite collection and empty media manifest
+inside a ZIP. Open the package in Anki to install the **QuizBowl v1** note type
+with ID, Front, and Back fields and one question/answer card template. The ID
+field is hidden on the card. Packages contain new cards without review history.
+Choose **Always update notes** to refresh existing notes, leave learning-progress
+import disabled to preserve your reviews, and retain the shipped field/template
+schema. Anki's package timestamps have whole-second precision, even with Always
+update selected; if an edit exported in the same second does not refresh a note,
+download it again a second later. See the
+[official package import guide](https://docs.ankiweb.net/manual/importing/packaged-decks).
+
+CSV uses UTF-8 and quoted ID, Front, Back, Tags, and GUID columns. File headers
+select comma separation, HTML, the note type, and the special Tags/GUID columns.
+Import an APKG once to install QuizBowl v1, then use that same note type for CSV.
+Map ID/Front/Back to their fields and Tags/GUID to their special import columns.
+Keep ID and GUID unchanged to allow updates across CSV and APKG imports.
+Pre-feature CSVs imported into Basic lack these identities and cannot be merged
+automatically with the new exports. Instructions are included in the deck panel;
+see the [official text import guide](https://docs.ankiweb.net/manual/importing/text-files).
 Category, subcategory, difficulty, deck/card topics, and identifier complexity
 become tags. Tag values are percent-encoded to preserve spaces within one tag.
 Answers include subject metadata and tournament/packet attribution when saved.
@@ -462,13 +476,42 @@ HTML attributes are removed. Older saved questions use their stored plain text;
 new QBReader questions also retain formatted parts and lead-ins.
 
 Task 7 generation is still pending. Export only reads saved card `identifiers`
-arrays containing `{ clue, complexity, part, sourceExcerpt }`; complexity is
+arrays containing `{ id?, clue, complexity, part, sourceExcerpt }`; complexity is
 `simple`, `intermediate`, or `complex`, and `part` is a zero-based original answer
 index. Malformed identifiers are omitted. Each exported identifier includes
 its original official answer and verification excerpt. Export never calls AI.
 No generation UI or generation/cache/quota implementation is introduced here.
 
-The three High subtasks remain pending: APKG packages, stable Anki note IDs,
-and Anki application formatting/duplicate validation. CSV serialization and
-browser downloads are covered by `tests/anki-export.test.mjs` and desktop/mobile
-deck tests; these do not establish Anki application import or duplicate behavior.
+Note IDs use SHA-256 over versioned original-question identities, with a saved
+identifier ID and part for clue cards. Legacy identifiers without IDs use their
+original source excerpt and part; clues with the same legacy source identity
+collapse into one note. Editing clue text or complexity keeps its identity.
+Account/deck IDs, names, filters, and editable question text do not affect note
+identity. Duplicate source notes within an export merge their tags. APKG and CSV
+use the same GUIDs. Canonical deck paths are hashed for APKG deck IDs; raw account
+IDs are not included in downloaded files.
+
+The authenticated `/api/decks/export` endpoint rechecks ownership or live school
+membership/sharing and reads cards in the same Firestore transaction. It accepts
+only deck references and filters, not caller-supplied question data. APKG exports
+are limited to 5000 saved questions, 5000 notes, and 16 MiB of serialized note data.
+The server uses unique temporary files, closes SQLite, and cleans up afterward.
+Node **22.13+** is required for built-in SQLite; Node 24 was verified here.
+
+All task 8 subtasks are complete. Run `pnpm test:anki` for CSV/identity/archive
+checks. Desktop/mobile deck tests cover both downloads, stored identifiers,
+empty/invalid filters, private access, shared access, and revoked access.
+`pnpm test:anki:imports` uses the official Anki 26.9.3 backend to import APKG/CSV,
+render cards, reimport duplicates, update edits, import filtered copies, switch
+between formats, and verify review scheduling is preserved. It uses temporary
+collections under `.tools` and never opens the user's Anki collection.
+
+To run backend validation, create a Python virtual environment, install
+`tests/anki-requirements.txt`, and set `ANKI_TEST_PYTHON` to its Python executable:
+
+```powershell
+python -m venv .tools/anki-venv
+.tools/anki-venv/Scripts/python.exe -m pip install -r tests/anki-requirements.txt
+$env:ANKI_TEST_PYTHON = (Resolve-Path .tools/anki-venv/Scripts/python.exe).Path
+pnpm test:anki:imports
+```
