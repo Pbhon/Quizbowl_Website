@@ -3,7 +3,7 @@ import vm from "node:vm";
 import test from "node:test";
 import assert from "node:assert/strict";
 import ts from "typescript";
-const module = { exports: {} };
+const compiledModule = { exports: {} };
 vm.runInNewContext(
   ts.transpileModule(readFileSync("src/lib/anki-export.ts", "utf8"), {
     compilerOptions: {
@@ -12,8 +12,8 @@ vm.runInNewContext(
     },
   }).outputText,
   {
-    module,
-    exports: module.exports,
+    module: compiledModule,
+    exports: compiledModule.exports,
     require: () => {
       const decksModule = { exports: {} };
       vm.runInNewContext(
@@ -26,7 +26,7 @@ vm.runInNewContext(
     },
   },
 );
-const { ankiCSV, exportRows } = module.exports;
+const { ankiCSV, exportRows } = compiledModule.exports;
 test("formatting keeps emphasis and line breaks while escaping active markup and edited text", () => {
   const formatted = {
     ...question,
@@ -156,6 +156,11 @@ test("exports category, subcategory and deck/card topics as whitespace-safe tags
 });
 test("includes available tournament/packet source and handles missing source", () => {
   assert.ok(exportRows(deck)[0].back.includes("Source: Tournament · Packet 1"));
-  const missing = { ...deck, cards: [{ ...deck.cards[0], originalQuestion: { ...question, source: "" } }] };
+  const missing = {
+    ...deck,
+    cards: [
+      { ...deck.cards[0], originalQuestion: { ...question, source: "" } },
+    ],
+  };
   assert.ok(!exportRows(missing)[0].back.includes("Source:"));
 });

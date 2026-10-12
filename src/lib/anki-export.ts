@@ -33,13 +33,21 @@ export function formattedHTML(html: string) {
 
 function exportTags(deck: StudyDeck, card: SavedCard, complexity?: string) {
   const tag = (value: string) => encodeURIComponent(value.trim());
-  return [...new Set([
-    card.originalQuestion.category && `category::${tag(card.originalQuestion.category)}`,
-    card.originalQuestion.subcategory && `subcategory::${tag(card.originalQuestion.subcategory)}`,
-    `difficulty::${card.originalQuestion.difficulty}`,
-    ...[...deck.tags, ...card.tags].filter((value) => value.trim()).map((value) => `topic::${tag(value)}`),
-    complexity && `complexity::${complexity}`,
-  ].filter(Boolean))].join(" ");
+  return [
+    ...new Set(
+      [
+        card.originalQuestion.category &&
+          `category::${tag(card.originalQuestion.category)}`,
+        card.originalQuestion.subcategory &&
+          `subcategory::${tag(card.originalQuestion.subcategory)}`,
+        `difficulty::${card.originalQuestion.difficulty}`,
+        ...[...deck.tags, ...card.tags]
+          .filter((value) => value.trim())
+          .map((value) => `topic::${tag(value)}`),
+        complexity && `complexity::${complexity}`,
+      ].filter(Boolean),
+    ),
+  ].join(" ");
 }
 function sourceHTML(card: SavedCard) {
   const question = card.originalQuestion;
@@ -82,8 +90,8 @@ export function exportRows(
         )
         .map((identifier) => ({
           front: textHTML(identifier.clue),
-            back: `${formattedHTML(card.originalQuestion.answers[identifier.part] || textHTML(card.originalQuestion.answerLines[identifier.part]))}<br><br>Source excerpt: ${textHTML(identifier.sourceExcerpt)}${sourceHTML(card)}`,
-            tags: exportTags(deck, card, identifier.complexity),
+          back: `${formattedHTML(card.originalQuestion.answers[identifier.part] || textHTML(card.originalQuestion.answerLines[identifier.part]))}<br><br>Source excerpt: ${textHTML(identifier.sourceExcerpt)}${sourceHTML(card)}`,
+          tags: exportTags(deck, card, identifier.complexity),
         })),
     );
   return cards.map((card) => ({
@@ -103,13 +111,14 @@ export function exportRows(
     ]
       .filter(Boolean)
       .join("<br><br>"),
-    back: card.originalQuestion.answerLines
-      .map((line, i) =>
-        card.originalQuestion.answers[i]
-          ? formattedHTML(card.originalQuestion.answers[i])
-          : textHTML(line),
-      )
-      .join("<br><br>") + sourceHTML(card),
+    back:
+      card.originalQuestion.answerLines
+        .map((line, i) =>
+          card.originalQuestion.answers[i]
+            ? formattedHTML(card.originalQuestion.answers[i])
+            : textHTML(line),
+        )
+        .join("<br><br>") + sourceHTML(card),
     tags: exportTags(deck, card),
   }));
 }

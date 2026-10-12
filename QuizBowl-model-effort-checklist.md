@@ -155,8 +155,17 @@ Questions stays private. No AI generation is added.
 - [x] **[Low]** Include category, subcategory, and topic tags
 - [x] **[Low]** Include tournament/source information when available
 - [ ] **[High]** Use stable Anki note identifiers to reduce duplicates
-- [ ] **[Low]** Allow students to download and import exported decks
+- [x] **[Low]** Allow students to download and import exported decks
 - [ ] **[High]** Test Anki exports for formatting and duplicate handling
+
+Task 8's nine Low/Medium subtasks are complete at `/decks`: download Anki CSV
+for full questions or saved identifier cards, with category/difficulty/complexity
+filters, official answers, formatting, subject/topic tags, and source attribution.
+CSV import instructions are included in each deck panel. Task 7 generation is
+still pending; identifier export reads saved results only and makes no AI calls.
+The three High subtasks (APKG, stable note IDs, and Anki application formatting/
+duplicate validation) remain unchecked as requested. Older saved questions retain
+their stored plain text; newly fetched questions also preserve basic formatting.
 
 ## 9. Teacher/Admin Dashboard
 - [ ] **[Medium]** Display all authorized team members

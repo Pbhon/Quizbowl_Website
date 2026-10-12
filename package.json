@@ -14,6 +14,7 @@
     "test:practice": "node --test tests/practice.test.mjs tests/practice-persistence.test.mjs",
     "test:statistics": "node --test tests/statistics.test.mjs",
     "test:history": "node --test tests/history.test.mjs",
+    "test:anki": "node --test tests/anki-export.test.mjs",
     "format": "node node_modules/prettier/bin/prettier.cjs --write src tests scripts next.config.ts playwright.config.ts package.json",
     "format:check": "node node_modules/prettier/bin/prettier.cjs --check src tests scripts next.config.ts playwright.config.ts package.json",
     "emulators": "node scripts/firebase.mjs emulators:start --project demo-quizbowl --only auth,firestore"

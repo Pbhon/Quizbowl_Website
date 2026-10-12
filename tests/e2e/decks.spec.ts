@@ -73,6 +73,32 @@ test("decks: topic import, stars, multiple destinations, edits, flashcards and o
       has: page.getByRole("heading", { name: "Biology topics", exact: true }),
     });
     await expect(deck).toContainText("1 saved questions");
+    await deck.getByText("Export to Anki CSV", { exact: true }).click();
+    await deck.getByLabel("Export difficulty").selectOption("0");
+    await expect(
+      deck.getByRole("button", { name: "Download Anki CSV" }),
+    ).toBeDisabled();
+    await deck.getByLabel("Export difficulty").selectOption("4");
+    const downloadPromise = page.waitForEvent("download");
+    await deck.getByRole("button", { name: "Download Anki CSV" }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe("Biology topics-questions.csv");
+    const stream = await download.createReadStream();
+    const chunks = [];
+    for await (const chunk of stream!) chunks.push(chunk);
+    const csv = Buffer.concat(chunks).toString("utf8");
+    expect(csv).toContain("#html:true");
+    expect(csv).toContain(
+      "Name the powerhouse.<br><br>Name the photosynthesis organelle.",
+    );
+    expect(csv).toContain("<b>mitochondria</b>");
+    expect(csv).toContain("Deck test packet");
+    expect(csv).toContain("topic::biology");
+    await deck.getByLabel("Export card type").selectOption("identifiers");
+    await expect(deck.getByLabel("Clue complexity")).toBeVisible();
+    await expect(
+      deck.getByRole("button", { name: "Download Anki CSV" }),
+    ).toBeDisabled();
     await deck
       .getByRole("button", { name: "Study flashcards", exact: true })
       .click();
@@ -95,7 +121,7 @@ test("decks: topic import, stars, multiple destinations, edits, flashcards and o
       has: page.getByRole("heading", { name: "Cell review", exact: true }),
     });
     await expect(deck).toContainText("Full bonus practice");
-    await deck.locator("summary").first().click();
+    await deck.locator("summary").filter({ hasText: "Difficulty 4" }).click();
     await deck.getByRole("button", { name: "Edit card", exact: true }).click();
     await deck.getByLabel("Question part 1").fill("Edited clue for review");
     await deck.getByLabel("Answer part 1").fill("Edited study answer");
@@ -121,7 +147,7 @@ test("decks: topic import, stars, multiple destinations, edits, flashcards and o
     await expect(
       page.getByRole("heading", { name: "Second deck", exact: true }),
     ).toBeVisible();
-    await deck.locator("summary").first().click();
+    await deck.locator("summary").filter({ hasText: "Difficulty 4" }).click();
     await deck
       .getByRole("button", { name: "Add to deck", exact: true })
       .click();
@@ -229,7 +255,7 @@ test("decks: topic import, stars, multiple destinations, edits, flashcards and o
       has: page.getByRole("heading", { name: "Second deck", exact: true }),
     });
     await expect(second).toContainText("1 saved questions");
-    await second.locator("summary").first().click();
+    await second.locator("summary").filter({ hasText: "Difficulty 4" }).click();
     await second
       .getByRole("button", { name: "Remove card", exact: true })
       .click();

@@ -438,3 +438,37 @@ The existing practice tests cover the QBReader fetching contract.
 On this machine the default Turbopack production build can fail while launching
 its CSS compiler. The documented Next.js fallback is
 `node node_modules/next/dist/bin/next build --webpack`, which passes.
+
+## Anki CSV exports (Task 8)
+
+Open **Export to Anki CSV** on any accessible deck at `/decks`, including
+team-shared decks. Choose full questions or saved AI identifiers, filter by
+category and difficulty (0–10), and optionally filter identifiers by complexity.
+The matching card count controls whether **Download Anki CSV** is enabled.
+Deck-browser search does not affect exports. Full bonuses include their lead-in
+and every part; full tossups export as one card. Study question edits are exported,
+while answers always come from the saved original QBReader question.
+
+Files use UTF-8, quoted CSV fields, and Anki headers for comma separation, HTML,
+Front/Back column names, and the Tags column. Import with Anki's Basic note type,
+map Front/Back/Tags, enable HTML, and choose the destination deck. Instructions
+are also available inside each export panel. See the
+[official Anki text import guide](https://docs.ankiweb.net/manual/importing/text-files).
+Category, subcategory, difficulty, deck/card topics, and identifier complexity
+become tags. Tag values are percent-encoded to preserve spaces within one tag.
+Answers include subject metadata and tournament/packet attribution when saved.
+Basic HTML emphasis and line breaks are retained; other markup is escaped and
+HTML attributes are removed. Older saved questions use their stored plain text;
+new QBReader questions also retain formatted parts and lead-ins.
+
+Task 7 generation is still pending. Export only reads saved card `identifiers`
+arrays containing `{ clue, complexity, part, sourceExcerpt }`; complexity is
+`simple`, `intermediate`, or `complex`, and `part` is a zero-based original answer
+index. Malformed identifiers are omitted. Each exported identifier includes
+its original official answer and verification excerpt. Export never calls AI.
+No generation UI or generation/cache/quota implementation is introduced here.
+
+The three High subtasks remain pending: APKG packages, stable Anki note IDs,
+and Anki application formatting/duplicate validation. CSV serialization and
+browser downloads are covered by `tests/anki-export.test.mjs` and desktop/mobile
+deck tests; these do not establish Anki application import or duplicate behavior.
