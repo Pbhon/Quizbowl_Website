@@ -18,7 +18,11 @@ jobs:
           java-version: 21
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      - run: pnpm format:check
       - run: pnpm typecheck
+      - run: pnpm test:practice
+      - run: pnpm test:statistics
+      - run: pnpm test:history
       - run: pnpm build
       - run: pnpm test:rules
       - run: pnpm exec playwright install --with-deps chromium

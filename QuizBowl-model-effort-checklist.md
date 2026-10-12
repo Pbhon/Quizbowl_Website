@@ -24,66 +24,103 @@ Official references: [GPT-6.1 Sol](https://developers.openai.com/api/docs/models
 Initialization status (2026-10-08): Firebase project quizbowl-66145 is connected through Git-ignored local environment variables. Email/password Authentication is enabled, local development domains are authorized, and Firestore profile rules/indexes are deployed. Live registration, profile persistence, sign-out, and sign-in were verified with a temporary account; the test account and profile were removed afterward. The GitHub-to-Vercel connection still requires the intended repository and Vercel destination; see README.md for setup steps.
 
 ## 2. User Accounts & Authentication
-- [ ] **[Medium]** Student login and registration
-- [ ] **[Medium]** Teacher/Admin login
-- [ ] **[High]** Role-based access permissions
-- [ ] **[Low]** Student profile management
-- [ ] **[High]** Admin-managed student invitations
-- [ ] **[High]** Secure Firebase authentication and database rules
-- [ ] **[Low]** Account settings and preferences
+- [x] **[Medium]** Student login and registration
+- [x] **[Medium]** Teacher/Admin login
+- [x] **[High]** Role-based access permissions
+- [x] **[Low]** Student profile management
+- [x] **[High]** Automatic school membership (replaces invitations per user request); separate team workspaces
+- [x] **[High]** Secure Firebase authentication and database rules
+- [x] **[Low]** Account settings and preferences
+
+Additional account requirement: administrator signup is protected by a private,
+server-validated code. Task 2 is implemented and tested; the Firebase rules are
+deployed, and the first admin account is created. The owner must verify their email
+before staff access is enabled.
 
 ## 3. QBReader Question Practice
-- [ ] **[Medium]** Integrate QBReader API
-- [ ] **[Medium]** Fetch real tossup and bonus questions
-- [ ] **[Low]** Filter questions by difficulty (0–10)
-- [ ] **[Low]** Filter questions by category and subcategory
-- [ ] **[Medium]** Filter questions by specific topics
-- [ ] **[Low]** Select number of questions per session
-- [ ] **[Medium]** Support progressively revealed tossups
-- [ ] **[High]** Implement buzzing and typed responses
-- [ ] **[High]** Validate answers using QBReader answer checking
-- [ ] **[Low]** Display original answer lines and accepted alternatives
-- [ ] **[Medium]** Support multi-part bonus questions
-- [ ] **[Medium]** Track correct, incorrect, and skipped responses
-- [ ] **[Medium]** Avoid previously answered questions when requested
-- [ ] **[High]** Save all question attempts to Firebase
-- [ ] **[Low]** Display practice session summaries
+- [x] **[Medium]** Integrate QBReader API
+- [x] **[Medium]** Fetch real tossup and bonus questions
+- [x] **[Low]** Filter questions by difficulty (0–10)
+- [x] **[Low]** Filter questions by category and subcategory
+- [x] **[Medium]** Filter questions by specific topics
+- [x] **[Low]** Select number of questions per session
+- [x] **[Medium]** Support progressively revealed tossups
+- [x] **[High]** Implement buzzing and typed responses
+- [x] **[High]** Validate answers using QBReader answer checking
+- [x] **[Low]** Display original answer lines and accepted alternatives
+- [x] **[Medium]** Support multi-part bonus questions
+- [x] **[Medium]** Track correct, incorrect, and skipped responses
+- [x] **[Medium]** Avoid previously answered questions when requested
+- [x] **[High]** Save all question attempts to Firebase
+- [x] **[Low]** Display practice session summaries
 
 ## 4. Student Dashboard & Statistics
-- [ ] **[Low]** Display total questions attempted
-- [ ] **[Medium]** Track correct and incorrect questions
-- [ ] **[Low]** Calculate overall accuracy
-- [ ] **[Medium]** Show accuracy by category and subcategory
-- [ ] **[Medium]** Show performance by difficulty
-- [ ] **[Medium]** Track questions attempted daily, weekly, and monthly
-- [ ] **[Medium]** Visualize progress with interactive charts
-- [ ] **[Low]** Display recent practice sessions
-- [ ] **[Low]** Show upcoming assignments and competitions
-- [ ] **[Medium]** Recommend weak subjects for additional practice
+- [x] **[Low]** Display total questions attempted
+- [x] **[Medium]** Track correct and incorrect questions
+- [x] **[Low]** Calculate overall accuracy
+- [x] **[Medium]** Show accuracy by category and subcategory
+- [x] **[Medium]** Show performance by difficulty
+- [x] **[Medium]** Track questions attempted daily, weekly, and monthly
+- [x] **[Medium]** Visualize progress with interactive charts
+- [x] **[Low]** Display recent practice sessions
+- [x] **[Low]** Show upcoming assignments and competitions
+- [x] **[Medium]** Recommend weak subjects for additional practice
+
+Task 4 is available at `/dashboard`. Statistics are individual to the verified
+logged-in account; switching accounts clears the previous dashboard. Question
+counts deduplicate bonus parts within each session, while correct/incorrect and
+accuracy use individual responses (matching task 3). Activity follows the
+student's timezone. Upcoming items are filtered by school membership, publication,
+date, and student/team audience; authoring these items remains in tasks 10 and 11.
 
 ## 5. Question History
-- [ ] **[Low]** Display the 30 most recent question attempts
-- [ ] **[Medium]** Save complete attempt history in Firestore
-- [ ] **[Low]** Filter history by subject and difficulty
-- [ ] **[Low]** Filter correct and incorrect responses
-- [ ] **[Low]** Display submitted answers and official answer lines
-- [ ] **[Medium]** Retry previously missed questions
-- [ ] **[Medium]** Add questions from history to decks
-- [ ] **[High]** Prevent duplicate history submissions
+- [x] **[Low]** Display the 30 most recent question attempts
+- [x] **[Medium]** Save complete attempt history in Firestore
+- [x] **[Low]** Filter history by subject and difficulty
+- [x] **[Low]** Filter correct and incorrect responses
+- [x] **[Low]** Display submitted answers and official answer lines
+- [x] **[Medium]** Retry previously missed questions
+- [x] **[Medium]** Add questions from history to decks
+- [x] **[High]** Prevent duplicate history submissions
+
+Task 5 is available at `/history`. It reads the complete Firestore history saved
+by task 3, displays 30 attempts per page with older-history navigation, and supports
+subject, subcategory, difficulty 0–10, and outcome filters. Bonus parts are separate
+attempts; clarification submissions remain visible with the full original question.
+Missed-question retries create a new saved practice session using the original
+question, including all bonus parts. Questions can be saved to new or existing
+personal decks and viewed at `/decks`. Submission IDs are now bound to one response
+per account through private receipts committed atomically with history and session
+totals. Repeated requests replay their original verdict without adding records or
+scores; conflicting reuse is rejected. Deliberate retries in new sessions still
+count as new practice. All of task 5 is complete.
 
 ## 6. Custom Study Decks
-- [ ] **[Medium]** Create, rename, edit, and delete decks
-- [ ] **[Medium]** Create topic-based study decks
-- [ ] **[Medium]** Create saved-question study decks
-- [ ] **[Medium]** Create a default Starred Questions deck
-- [ ] **[Medium]** Star questions directly from the practice reader
-- [ ] **[Medium]** Add questions to one or multiple decks
-- [ ] **[Medium]** Save original QBReader questions and answer lines
-- [ ] **[Low]** Support custom topic tags
-- [ ] **[Low]** Browse and search saved cards
-- [ ] **[Low]** Flip through full-question flashcards
-- [ ] **[Low]** Edit or remove saved cards
-- [ ] **[High]** Support private and team-shared decks
+- [x] **[Medium]** Create, rename, edit, and delete decks
+- [x] **[Medium]** Create topic-based study decks
+- [x] **[Medium]** Create saved-question study decks
+- [x] **[Medium]** Create a default Starred Questions deck
+- [x] **[Medium]** Star questions directly from the practice reader
+- [x] **[Medium]** Add questions to one or multiple decks
+- [x] **[Medium]** Save original QBReader questions and answer lines
+- [x] **[Low]** Support custom topic tags
+- [x] **[Low]** Browse and search saved cards
+- [x] **[Low]** Flip through full-question flashcards
+- [x] **[Low]** Edit or remove saved cards
+- [x] **[High]** Support private and team-shared decks
+
+All of Task 6 is complete at `/decks`. Create empty or
+topic-populated decks, edit names/descriptions/tags, search saved questions,
+and flip through full-question flashcards. Practice supports direct starring;
+practice, history, and saved cards support multiple deck destinations. Original
+questions and every official answer line are retained separately from editable
+study text. Deck and card deletions require an inline confirmation. All access
+enforces deck ownership for all edits. Decks are private by default; owners can
+share with their configured school and revoke sharing. Current school members
+can study shared decks and copy original cards to their own decks. Shared reads
+and copies check membership and live visibility transactionally. Sharing,
+revocation, and deletion update the school directory atomically. Starred
+Questions stays private. No AI generation is added.
 
 ## 7. AI Identifier & Flashcard Generation
 - [ ] **[Medium]** Integrate Gemini API free tier

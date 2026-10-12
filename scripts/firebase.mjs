@@ -8,13 +8,27 @@ const env = { ...process.env };
 // Prefer a project-local portable JDK on Windows when present.
 const javaRoot = path.resolve(".tools/java");
 if (process.platform === "win32" && existsSync(javaRoot)) {
-  const jdk = readdirSync(javaRoot).find(name => name.startsWith("jdk-21"));
+  const jdk = readdirSync(javaRoot).find((name) => name.startsWith("jdk-21"));
   if (jdk) {
     env.JAVA_HOME = path.join(javaRoot, jdk);
-    const pathKey = Object.keys(env).find(key => key.toLowerCase() === "path") || "PATH";
-    env[pathKey] = `${path.join(env.JAVA_HOME, "bin")}${path.delimiter}${env[pathKey] || ""}`;
+    const pathKey =
+      Object.keys(env).find((key) => key.toLowerCase() === "path") || "PATH";
+    env[pathKey] =
+      `${path.join(env.JAVA_HOME, "bin")}${path.delimiter}${env[pathKey] || ""}`;
   }
 }
-const child = spawn(process.execPath, [require.resolve("firebase-tools/lib/bin/firebase.js"), ...process.argv.slice(2)], { env, stdio: "inherit" });
-child.on("error", error => { console.error(error.message); process.exitCode = 1; });
-child.on("exit", code => { process.exitCode = code ?? 1; });
+const child = spawn(
+  process.execPath,
+  [
+    require.resolve("firebase-tools/lib/bin/firebase.js"),
+    ...process.argv.slice(2),
+  ],
+  { env, stdio: "inherit" },
+);
+child.on("error", (error) => {
+  console.error(error.message);
+  process.exitCode = 1;
+});
+child.on("exit", (code) => {
+  process.exitCode = code ?? 1;
+});
