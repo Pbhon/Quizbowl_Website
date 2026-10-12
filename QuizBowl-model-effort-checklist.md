@@ -152,7 +152,7 @@ Questions stays private. No AI generation is added.
 - [x] **[Low]** Allow export by category and difficulty
 - [x] **[Low]** Allow export by clue complexity
 - [x] **[Medium]** Preserve official answer lines and question formatting
-- [ ] **[Low]** Include category, subcategory, and topic tags
+- [x] **[Low]** Include category, subcategory, and topic tags
 - [ ] **[Low]** Include tournament/source information when available
 - [ ] **[High]** Use stable Anki note identifiers to reduce duplicates
 - [ ] **[Low]** Allow students to download and import exported decks

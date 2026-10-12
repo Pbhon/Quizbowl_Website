@@ -1,4 +1,4 @@
-import type { StudyDeck, IdentifierCard } from "./decks";
+import type { StudyDeck, IdentifierCard, SavedCard } from "./decks";
 import { savedIdentifiers } from "./decks";
 
 export type ExportRow = { front: string; back: string; tags: string };
@@ -29,6 +29,17 @@ export function formattedHTML(html: string) {
       return tag ? `<${tag[1]}${tag[2].toLowerCase()}>` : textHTML(token);
     })
     .join("");
+}
+
+function exportTags(deck: StudyDeck, card: SavedCard, complexity?: string) {
+  const tag = (value: string) => encodeURIComponent(value.trim());
+  return [...new Set([
+    card.originalQuestion.category && `category::${tag(card.originalQuestion.category)}`,
+    card.originalQuestion.subcategory && `subcategory::${tag(card.originalQuestion.subcategory)}`,
+    `difficulty::${card.originalQuestion.difficulty}`,
+    ...[...deck.tags, ...card.tags].filter((value) => value.trim()).map((value) => `topic::${tag(value)}`),
+    complexity && `complexity::${complexity}`,
+  ].filter(Boolean))].join(" ");
 }
 
 /** UTF-8 CSV with Anki's import headers; headers are comments, never cards. */
@@ -68,7 +79,7 @@ export function exportRows(
         .map((identifier) => ({
           front: textHTML(identifier.clue),
           back: `${formattedHTML(card.originalQuestion.answers[identifier.part] || textHTML(card.originalQuestion.answerLines[identifier.part]))}<br><br>Source excerpt: ${textHTML(identifier.sourceExcerpt)}`,
-          tags: "",
+            tags: exportTags(deck, card, identifier.complexity),
         })),
     );
   return cards.map((card) => ({
@@ -95,6 +106,6 @@ export function exportRows(
           : textHTML(line),
       )
       .join("<br><br>"),
-    tags: "",
+    tags: exportTags(deck, card),
   }));
 }

@@ -146,3 +146,11 @@ test("category and difficulty filters include difficulty zero and combine", () =
   assert.equal(exportRows(deck, { category: "History" }).length, 0);
   assert.equal(exportRows(deck, { difficulty: "1" }).length, 0);
 });
+test("exports category, subcategory and deck/card topics as whitespace-safe tags", () => {
+  const tags = exportRows(deck)[0].tags;
+  assert.ok(tags.includes("category::Science"));
+  assert.ok(tags.includes("subcategory::Biology"));
+  assert.ok(tags.includes("topic::cell%20biology"));
+  assert.ok(tags.includes("topic::neurons"));
+  assert.ok(tags.includes("difficulty::0"));
+});
