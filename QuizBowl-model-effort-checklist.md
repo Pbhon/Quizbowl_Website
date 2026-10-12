@@ -150,7 +150,7 @@ Questions stays private. No AI generation is added.
 - [x] **[Medium]** Export full tossup question cards
 - [x] **[Medium]** Export individual AI-generated identifier cards
 - [x] **[Low]** Allow export by category and difficulty
-- [ ] **[Low]** Allow export by clue complexity
+- [x] **[Low]** Allow export by clue complexity
 - [ ] **[Medium]** Preserve official answer lines and question formatting
 - [ ] **[Low]** Include category, subcategory, and topic tags
 - [ ] **[Low]** Include tournament/source information when available

@@ -87,6 +87,8 @@ test("identifiers export separately with source excerpts and original part answe
   assert.equal(rows[0].front, "Which cell carries impulses?");
   assert.ok(rows[0].back.includes("neuron [accept nerve cell]"));
   assert.ok(rows[0].back.includes("called a neuron"));
+  assert.equal(exportRows(generated, { kind: "identifiers", complexity: "complex" }).length, 0);
+  assert.equal(exportRows(generated, { kind: "identifiers", complexity: "simple", difficulty: "0" }).length, 1);
 });
 test("full question rows retain the whole question and original official answer", () => {
   const edited = {

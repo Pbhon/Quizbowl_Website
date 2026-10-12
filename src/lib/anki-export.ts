@@ -1,4 +1,4 @@
-import type { StudyDeck } from "./decks";
+import type { StudyDeck, IdentifierCard } from "./decks";
 import { savedIdentifiers } from "./decks";
 
 export type ExportRow = { front: string; back: string; tags: string };
@@ -6,6 +6,7 @@ export type ExportOptions = {
   kind?: "questions" | "identifiers";
   category?: string;
   difficulty?: string;
+  complexity?: IdentifierCard["complexity"] | "";
 };
 
 /** UTF-8 CSV with Anki's import headers; headers are comments, never cards. */
@@ -34,7 +35,7 @@ export function exportRows(
   );
   if (options.kind === "identifiers")
     return cards.flatMap((card) =>
-      savedIdentifiers(card.identifiers, card.originalQuestion).map(
+      savedIdentifiers(card.identifiers, card.originalQuestion).filter((identifier) => !options.complexity || identifier.complexity === options.complexity).map(
         (identifier) => ({
           front: identifier.clue,
           back: `${card.originalQuestion.answerLines[identifier.part]}\n\nSource excerpt: ${identifier.sourceExcerpt}`,

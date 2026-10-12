@@ -32,6 +32,14 @@ export function DeckExport({ deck }: { deck: StudyDeck }) {
               {Array.from({ length: 11 }, (_, i) => <option key={i} value={String(i)}>{i}</option>)}
             </select>
           </FormField>
+          {options.kind === "identifiers" && <FormField id={`${prefix}-complexity`} label="Clue complexity">
+            <select id={`${prefix}-complexity`} className="form-select" value={options.complexity || ""} onChange={(e) => setOptions({ ...options, complexity: e.target.value as ExportOptions["complexity"] })}>
+              <option value="">All complexities</option>
+              <option value="simple">Simple / giveaway</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="complex">Complex / early buzzer</option>
+            </select>
+          </FormField>}
         </div>
         <p role="status">{rows.length} cards match the export filters.</p>
         {options.kind === "identifiers" && !rows.length && <p>No saved AI identifiers match. AI generation is not available yet.</p>}
