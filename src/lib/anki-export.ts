@@ -1,7 +1,46 @@
 import type { StudyDeck, IdentifierCard, SavedCard } from "./decks";
 import { savedIdentifiers } from "./decks";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { bytesToHex } from "@noble/hashes/utils.js";
 
-export type ExportRow = { front: string; back: string; tags: string };
+export const ANKI_NOTE_TYPE = "QuizBowl v1";
+export type ExportRow = {
+  noteId: string;
+  front: string;
+  back: string;
+  tags: string;
+};
+export function stableNoteId(card: SavedCard, identifier?: IdentifierCard) {
+  // Deck/account identity and editable study text do not belong in this key.
+  const source = card.originalQuestion;
+  const key = identifier
+    ? [
+        "identifier",
+        source.type,
+        source.id,
+        identifier.part,
+        identifier.id || identifier.sourceExcerpt.trim().replace(/\s+/g, " "),
+      ]
+    : ["question", source.type, source.id];
+  return `qb1-${bytesToHex(sha256(new TextEncoder().encode(JSON.stringify(key))))}`;
+}
+function uniqueRows(rows: ExportRow[]) {
+  const notes = new Map<string, ExportRow>();
+  for (const row of rows) {
+    const existing = notes.get(row.noteId);
+    if (existing)
+      existing.tags = [
+        ...new Set([...existing.tags.split(" "), ...row.tags.split(" ")]),
+      ]
+        .filter(Boolean)
+        .sort()
+        .join(" ");
+    else notes.set(row.noteId, { ...row });
+  }
+  return [...notes.values()].sort((a, b) =>
+    a.noteId < b.noteId ? -1 : a.noteId > b.noteId ? 1 : 0,
+  );
+}
 export type ExportOptions = {
   kind?: "questions" | "identifiers";
   category?: string;
@@ -61,10 +100,11 @@ export function ankiCSV(rows: ExportRow[]) {
     [
       "#separator:Comma",
       "#html:true",
-      "#tags column:3",
-      "#columns:Front,Back,Tags",
+      "#tags column:4",
+      `#notetype:${ANKI_NOTE_TYPE}`,
+      "#columns:ID,Front,Back,Tags",
       ...rows.map((row) =>
-        [row.front, row.back, row.tags].map(quote).join(","),
+        [row.noteId, row.front, row.back, row.tags].map(quote).join(","),
       ),
     ].join("\r\n") + "\r\n"
   );
@@ -82,43 +122,50 @@ export function exportRows(
         String(card.originalQuestion.difficulty) === options.difficulty),
   );
   if (options.kind === "identifiers")
-    return cards.flatMap((card) =>
-      savedIdentifiers(card.identifiers, card.originalQuestion)
-        .filter(
-          (identifier) =>
-            !options.complexity || identifier.complexity === options.complexity,
-        )
-        .map((identifier) => ({
-          front: textHTML(identifier.clue),
-          back: `${formattedHTML(card.originalQuestion.answers[identifier.part] || textHTML(card.originalQuestion.answerLines[identifier.part]))}<br><br>Source excerpt: ${textHTML(identifier.sourceExcerpt)}${sourceHTML(card)}`,
-          tags: exportTags(deck, card, identifier.complexity),
-        })),
-    );
-  return cards.map((card) => ({
-    front: [
-      card.question.leadin
-        ? card.question.leadin === card.originalQuestion.leadin &&
-          card.originalQuestion.formattedLeadin
-          ? formattedHTML(card.originalQuestion.formattedLeadin)
-          : textHTML(card.question.leadin)
-        : "",
-      ...card.question.parts.map((part, i) =>
-        part === card.originalQuestion.parts[i] &&
-        card.originalQuestion.formattedParts?.[i]
-          ? formattedHTML(card.originalQuestion.formattedParts[i])
-          : textHTML(part),
+    return uniqueRows(
+      cards.flatMap((card) =>
+        savedIdentifiers(card.identifiers, card.originalQuestion)
+          .filter(
+            (identifier) =>
+              !options.complexity ||
+              identifier.complexity === options.complexity,
+          )
+          .map((identifier) => ({
+            noteId: stableNoteId(card, identifier),
+            front: textHTML(identifier.clue),
+            back: `${formattedHTML(card.originalQuestion.answers[identifier.part] || textHTML(card.originalQuestion.answerLines[identifier.part]))}<br><br>Source excerpt: ${textHTML(identifier.sourceExcerpt)}${sourceHTML(card)}`,
+            tags: exportTags(deck, card, identifier.complexity),
+          })),
       ),
-    ]
-      .filter(Boolean)
-      .join("<br><br>"),
-    back:
-      card.originalQuestion.answerLines
-        .map((line, i) =>
-          card.originalQuestion.answers[i]
-            ? formattedHTML(card.originalQuestion.answers[i])
-            : textHTML(line),
-        )
-        .join("<br><br>") + sourceHTML(card),
-    tags: exportTags(deck, card),
-  }));
+    );
+  return uniqueRows(
+    cards.map((card) => ({
+      noteId: stableNoteId(card),
+      front: [
+        card.question.leadin
+          ? card.question.leadin === card.originalQuestion.leadin &&
+            card.originalQuestion.formattedLeadin
+            ? formattedHTML(card.originalQuestion.formattedLeadin)
+            : textHTML(card.question.leadin)
+          : "",
+        ...card.question.parts.map((part, i) =>
+          part === card.originalQuestion.parts[i] &&
+          card.originalQuestion.formattedParts?.[i]
+            ? formattedHTML(card.originalQuestion.formattedParts[i])
+            : textHTML(part),
+        ),
+      ]
+        .filter(Boolean)
+        .join("<br><br>"),
+      back:
+        card.originalQuestion.answerLines
+          .map((line, i) =>
+            card.originalQuestion.answers[i]
+              ? formattedHTML(card.originalQuestion.answers[i])
+              : textHTML(line),
+          )
+          .join("<br><br>") + sourceHTML(card),
+      tags: exportTags(deck, card),
+    })),
+  );
 }

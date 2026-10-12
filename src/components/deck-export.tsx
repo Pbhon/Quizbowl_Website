@@ -144,15 +144,22 @@ export function DeckExport({ deck }: { deck: StudyDeck }) {
             </li>
             <li>
               Select the CSV and choose your destination deck and the Basic note
-              type.
+              type named QuizBowl v1. Copy Basic, add an ID field, and move ID
+              to the first field; keep the card templates displaying Front and
+              Back.
             </li>
             <li>
-              Map Front to Front, Back to Back, and Tags to Tags. Use comma
-              separation and enable HTML in fields; current Anki versions read
-              these settings from the file headers.
+              Map ID to ID, Front to Front, Back to Back, and Tags to Tags. Use
+              comma separation and enable HTML in fields; current Anki versions
+              read these settings from the file headers.
             </li>
             <li>Preview the cards and select Import.</li>
           </ol>
+          <p className="mt-2">
+            Keep ID unchanged and select update existing notes with match scope
+            set to note type when importing again. This preserves one note
+            across deck copies and question edits.
+          </p>
           <p className="mt-2">
             Existing decks saved before this feature retain their stored plain
             question text. Formatted answer lines are exported when available.

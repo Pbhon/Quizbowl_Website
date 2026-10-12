@@ -3,6 +3,8 @@ import vm from "node:vm";
 import test from "node:test";
 import assert from "node:assert/strict";
 import ts from "typescript";
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
 const compiledModule = { exports: {} };
 vm.runInNewContext(
   ts.transpileModule(readFileSync("src/lib/anki-export.ts", "utf8"), {
@@ -14,7 +16,9 @@ vm.runInNewContext(
   {
     module: compiledModule,
     exports: compiledModule.exports,
-    require: () => {
+    TextEncoder,
+    require: (id) => {
+      if (id !== "./decks") return require(id);
       const decksModule = { exports: {} };
       vm.runInNewContext(
         ts.transpileModule(readFileSync("src/lib/decks.ts", "utf8"), {
@@ -27,6 +31,69 @@ vm.runInNewContext(
   },
 );
 const { ankiCSV, exportRows } = compiledModule.exports;
+test("note IDs survive deck copies, filters and edits; different questions and clues stay distinct", () => {
+  const first = exportRows(deck)[0].noteId;
+  const copy = {
+    ...deck,
+    id: "different",
+    name: "renamed",
+    cards: [
+      {
+        ...deck.cards[0],
+        id: "copied",
+        question: { ...question, parts: ["edited"] },
+      },
+    ],
+  };
+  assert.equal(exportRows(copy, { difficulty: "0" })[0].noteId, first);
+  assert.notEqual(
+    exportRows({
+      ...deck,
+      cards: [
+        { ...deck.cards[0], originalQuestion: { ...question, id: "other" } },
+      ],
+    })[0].noteId,
+    first,
+  );
+  const clue = {
+    id: "clue-1",
+    clue: "Original",
+    part: 0,
+    sourceExcerpt: "excerpt",
+    complexity: "simple",
+  };
+  const generated = (identifiers) =>
+    exportRows(
+      { ...deck, cards: [{ ...deck.cards[0], identifiers }] },
+      { kind: "identifiers" },
+    );
+  assert.equal(
+    generated([clue])[0].noteId,
+    generated([
+      {
+        ...clue,
+        clue: "edited",
+        complexity: "complex",
+        sourceExcerpt: "edited excerpt",
+      },
+    ])[0].noteId,
+  );
+  assert.notEqual(
+    generated([clue])[0].noteId,
+    generated([{ ...clue, id: "clue-2" }])[0].noteId,
+  );
+  const legacy = { ...clue, id: undefined };
+  assert.equal(
+    generated([legacy])[0].noteId,
+    generated([{ ...legacy, clue: "edited" }])[0].noteId,
+  );
+  const duplicates = exportRows({
+    ...deck,
+    cards: [deck.cards[0], { ...deck.cards[0], tags: ["second"] }],
+  });
+  assert.equal(duplicates.length, 1);
+  assert.ok(duplicates[0].tags.includes("topic::second"));
+});
 test("formatting keeps emphasis and line breaks while escaping active markup and edited text", () => {
   const formatted = {
     ...question,
@@ -79,10 +146,12 @@ const deck = {
   ],
 };
 test("CSV escapes delimiters, quotes, newlines and keeps Unicode with Anki headers", () => {
-  const csv = ankiCSV([{ front: 'a,"b"\nc', back: "日本語", tags: "" }]);
+  const csv = ankiCSV([
+    { noteId: "id", front: 'a,"b"\nc', back: "日本語", tags: "" },
+  ]);
   assert.ok(csv.startsWith("#separator:Comma\r\n#html:true\r\n"));
-  assert.ok(csv.includes('"a,""b""\nc","日本語",""\r\n'));
-  assert.equal(ankiCSV([]).split("\r\n").length, 5);
+  assert.ok(csv.includes('"id","a,""b""\nc","日本語",""\r\n'));
+  assert.equal(ankiCSV([]).split("\r\n").length, 6);
 });
 test("identifiers export separately with source excerpts and original part answers", () => {
   assert.equal(exportRows(deck, { kind: "identifiers" }).length, 0);

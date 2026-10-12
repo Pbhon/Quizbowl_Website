@@ -1,6 +1,7 @@
 import type { Question } from "./practice";
 
 export type IdentifierCard = {
+  id?: string;
   clue: string;
   complexity: "simple" | "intermediate" | "complex";
   part: number;
@@ -25,7 +26,8 @@ export function savedIdentifiers(
         typeof item.sourceExcerpt === "string" &&
         item.sourceExcerpt.trim(),
     )
-    .map(({ clue, complexity, part, sourceExcerpt }) => ({
+    .map(({ id, clue, complexity, part, sourceExcerpt }) => ({
+      ...(typeof id === "string" && id.trim() ? { id: id.trim() } : {}),
       clue,
       complexity,
       part,

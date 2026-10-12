@@ -20,9 +20,11 @@
     "emulators": "node scripts/firebase.mjs emulators:start --project demo-quizbowl --only auth,firestore"
   },
   "dependencies": {
+    "@noble/hashes": "^2.4.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cn": "^0.4.0",
+    "fflate": "^0.8.3",
     "firebase": "^12.19.0",
     "firebase-admin": "^14.5.0",
     "lucide-react": "^1.52.0",
