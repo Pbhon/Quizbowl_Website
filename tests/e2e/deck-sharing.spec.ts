@@ -290,7 +290,13 @@ test("private/team visibility, owner-only edits, school isolation and revocation
     await expect(
       peerDeck.getByRole("region", { name: "Full-question flashcards" }),
     ).toContainText("RNA");
-    await peerDeck.locator("summary").filter({ hasText: "Difficulty" }).click();
+    const questionTitle = peerDeck
+      .locator("summary")
+      .filter({ hasText: "Difficulty" });
+    await expect(questionTitle).toHaveText(
+      "Biology · Difficulty 4 · Shared source packet",
+    );
+    await questionTitle.click();
     await expect(
       peerDeck.getByRole("button", { name: "Edit card", exact: true }),
     ).toHaveCount(0);

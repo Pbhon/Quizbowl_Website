@@ -857,8 +857,9 @@ function SavedCardPanel({
   return (
     <details className="rounded-lg border p-4">
       <summary className="cursor-pointer text-sm font-medium break-words">
-        {card.question.answerLines[0]} · {card.question.category} · Difficulty{" "}
-        {card.question.difficulty}
+        {card.question.subcategory || card.question.category || "General"} ·
+        Difficulty {card.question.difficulty}
+        {card.question.source && ` · ${card.question.source}`}
       </summary>
       <div className="mt-4 space-y-4">
         <QuestionFace question={card.question} />

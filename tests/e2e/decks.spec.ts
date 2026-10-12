@@ -96,6 +96,9 @@ test("decks: topic import, stars, multiple destinations, edits, flashcards and o
       deck.getByRole("button", { name: "Study flashcards" }),
     ).toBeHidden();
     await deckToggle.click();
+    await expect(
+      deck.locator("summary").filter({ hasText: "Difficulty 4" }),
+    ).toHaveText("Biology · Difficulty 4 · Deck test packet");
     await expect(deck).toContainText("1 saved questions");
     await deck.getByText("Export to Anki", { exact: true }).click();
     await deck.getByLabel("Export difficulty").selectOption("0");
