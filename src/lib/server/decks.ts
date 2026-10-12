@@ -7,6 +7,7 @@ import {
   type QuerySnapshot,
 } from "firebase-admin/firestore";
 import type { Question } from "@/lib/practice";
+import { savedIdentifiers } from "@/lib/decks";
 import { documentId, historyQuestion } from "./history";
 import { PracticeError } from "./practice-persistence";
 import {
@@ -106,6 +107,10 @@ function serializeDeck(
       originalQuestion: (saved.originalQuestion || saved.question) as Question,
       tags: saved.tags || [],
       notes: saved.notes || "",
+      identifiers: savedIdentifiers(
+        saved.identifiers,
+        saved.originalQuestion || saved.question,
+      ),
     };
   });
   return {

@@ -1,4 +1,5 @@
 import type { StudyDeck } from "./decks";
+import { savedIdentifiers } from "./decks";
 
 export type ExportRow = { front: string; back: string; tags: string };
 export type ExportOptions = { kind?: "questions" | "identifiers" };
@@ -19,8 +20,20 @@ export function ankiCSV(rows: ExportRow[]) {
   );
 }
 
-export function exportRows(deck: StudyDeck, options: ExportOptions = {}): ExportRow[] {
-  if (options.kind === "identifiers") return [];
+export function exportRows(
+  deck: StudyDeck,
+  options: ExportOptions = {},
+): ExportRow[] {
+  if (options.kind === "identifiers")
+    return deck.cards.flatMap((card) =>
+      savedIdentifiers(card.identifiers, card.originalQuestion).map(
+        (identifier) => ({
+          front: identifier.clue,
+          back: `${card.originalQuestion.answerLines[identifier.part]}\n\nSource excerpt: ${identifier.sourceExcerpt}`,
+          tags: "",
+        }),
+      ),
+    );
   return deck.cards.map((card) => ({
     front: [card.question.leadin, ...card.question.parts]
       .filter(Boolean)

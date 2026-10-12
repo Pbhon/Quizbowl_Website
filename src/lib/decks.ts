@@ -1,11 +1,44 @@
 import type { Question } from "./practice";
 
+export type IdentifierCard = {
+  clue: string;
+  complexity: "simple" | "intermediate" | "complex";
+  part: number;
+  sourceExcerpt: string;
+};
+/** Read saved generation results only; exporting never generates clues. */
+export function savedIdentifiers(
+  value: unknown,
+  question: Question,
+): IdentifierCard[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (item): item is IdentifierCard =>
+        item &&
+        typeof item.clue === "string" &&
+        item.clue.trim() &&
+        ["simple", "intermediate", "complex"].includes(item.complexity) &&
+        Number.isInteger(item.part) &&
+        item.part >= 0 &&
+        item.part < question.answerLines.length &&
+        typeof item.sourceExcerpt === "string" &&
+        item.sourceExcerpt.trim(),
+    )
+    .map(({ clue, complexity, part, sourceExcerpt }) => ({
+      clue,
+      complexity,
+      part,
+      sourceExcerpt,
+    }));
+}
 export type SavedCard = {
   id: string;
   question: Question;
   originalQuestion: Question;
   tags: string[];
   notes: string;
+  identifiers?: IdentifierCard[];
 };
 export type StudyDeck = {
   id: string;

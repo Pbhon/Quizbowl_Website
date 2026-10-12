@@ -11,7 +11,20 @@ vm.runInNewContext(
       target: ts.ScriptTarget.ES2022,
     },
   }).outputText,
-  { module, exports: module.exports },
+  {
+    module,
+    exports: module.exports,
+    require: () => {
+      const decksModule = { exports: {} };
+      vm.runInNewContext(
+        ts.transpileModule(readFileSync("src/lib/decks.ts", "utf8"), {
+          compilerOptions: { module: ts.ModuleKind.CommonJS },
+        }).outputText,
+        { module: decksModule, exports: decksModule.exports },
+      );
+      return decksModule.exports;
+    },
+  },
 );
 const { ankiCSV, exportRows } = module.exports;
 const question = {
@@ -44,6 +57,36 @@ test("CSV escapes delimiters, quotes, newlines and keeps Unicode with Anki heade
   assert.ok(csv.startsWith("#separator:Comma\r\n#html:true\r\n"));
   assert.ok(csv.includes('"a,""b""\nc","日本語",""\r\n'));
   assert.equal(ankiCSV([]).split("\r\n").length, 5);
+});
+test("identifiers export separately with source excerpts and original part answers", () => {
+  assert.equal(exportRows(deck, { kind: "identifiers" }).length, 0);
+  const generated = {
+    ...deck,
+    cards: [
+      {
+        ...deck.cards[0],
+        identifiers: [
+          {
+            clue: "Which cell carries impulses?",
+            complexity: "simple",
+            part: 0,
+            sourceExcerpt: "called a neuron",
+          },
+          {
+            clue: "Invalid",
+            complexity: "complex",
+            part: 8,
+            sourceExcerpt: "x",
+          },
+        ],
+      },
+    ],
+  };
+  const rows = exportRows(generated, { kind: "identifiers" });
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].front, "Which cell carries impulses?");
+  assert.ok(rows[0].back.includes("neuron [accept nerve cell]"));
+  assert.ok(rows[0].back.includes("called a neuron"));
 });
 test("full question rows retain the whole question and original official answer", () => {
   const edited = {
