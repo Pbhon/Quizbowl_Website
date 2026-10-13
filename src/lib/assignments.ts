@@ -6,6 +6,8 @@ export type PracticeAssignment = {
   audience: "team" | "students";
   studentUids: string[];
   questionCount: number;
+  difficultyMin: number;
+  difficultyMax: number;
   type: "tossup" | "bonus";
   dueAt: string | null;
 };

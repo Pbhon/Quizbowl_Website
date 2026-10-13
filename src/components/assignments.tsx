@@ -137,6 +137,16 @@ function AssignmentForm({
   const [title, setTitle] = useState(assignment?.title || "");
   const [description, setDescription] = useState(assignment?.description || "");
   const [published, setPublished] = useState(assignment?.published || false);
+  const [questionCount, setQuestionCount] = useState(
+    assignment?.questionCount ?? 10,
+  );
+  const [difficultyMin, setDifficultyMin] = useState(
+    assignment?.difficultyMin ?? 0,
+  );
+  const [difficultyMax, setDifficultyMax] = useState(
+    assignment?.difficultyMax ?? 10,
+  );
+  const [type, setType] = useState(assignment?.type ?? "tossup");
   const [audience, setAudience] = useState(assignment?.audience || "team");
   const [studentUids, setStudentUids] = useState<string[]>(
     assignment?.studentUids || [],
@@ -162,6 +172,10 @@ function AssignmentForm({
                 title,
                 description,
                 published,
+                questionCount,
+                difficultyMin,
+                difficultyMax,
+                type,
                 audience,
                 studentUids,
               });
@@ -185,6 +199,60 @@ function AssignmentForm({
             {assignment ? "Edit assignment" : "Create assignment"}
           </h2>
           <fieldset disabled={busy} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <FormField id="assignment-count" label="Question count">
+                <Input
+                  id="assignment-count"
+                  type="number"
+                  required
+                  min={1}
+                  max={500}
+                  value={questionCount}
+                  onChange={(event) =>
+                    setQuestionCount(Number(event.target.value))
+                  }
+                />
+              </FormField>
+              <FormField id="assignment-min" label="Minimum difficulty">
+                <Input
+                  id="assignment-min"
+                  type="number"
+                  required
+                  min={0}
+                  max={10}
+                  value={difficultyMin}
+                  onChange={(event) =>
+                    setDifficultyMin(Number(event.target.value))
+                  }
+                />
+              </FormField>
+              <FormField id="assignment-max" label="Maximum difficulty">
+                <Input
+                  id="assignment-max"
+                  type="number"
+                  required
+                  min={difficultyMin}
+                  max={10}
+                  value={difficultyMax}
+                  onChange={(event) =>
+                    setDifficultyMax(Number(event.target.value))
+                  }
+                />
+              </FormField>
+            </div>
+            <FormField id="assignment-type" label="Question type">
+              <select
+                id="assignment-type"
+                className="form-select"
+                value={type}
+                onChange={(event) =>
+                  setType(event.target.value as "tossup" | "bonus")
+                }
+              >
+                <option value="tossup">Tossup</option>
+                <option value="bonus">Bonus</option>
+              </select>
+            </FormField>
             <FormField id="assignment-title" label="Title">
               <Input
                 id="assignment-title"

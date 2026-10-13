@@ -58,14 +58,36 @@ export async function saveAssignment(
       : [...new Set(((body.studentUids as unknown[]) || []).map(documentId))];
   if (audience === "students" && !studentUids.length)
     throw new PracticeError("Choose at least one student.", 400);
+  const questionCount = body.questionCount ?? 10,
+    difficultyMin = body.difficultyMin ?? 0,
+    difficultyMax = body.difficultyMax ?? 10;
+  if (
+    !Number.isInteger(questionCount) ||
+    Number(questionCount) < 1 ||
+    Number(questionCount) > 500 ||
+    !Number.isInteger(difficultyMin) ||
+    !Number.isInteger(difficultyMax) ||
+    Number(difficultyMin) < 0 ||
+    Number(difficultyMax) > 10 ||
+    Number(difficultyMin) > Number(difficultyMax)
+  )
+    throw new PracticeError(
+      "Use 1–500 questions and a difficulty range within 0–10.",
+      400,
+    );
+  const type = body.type ?? "tossup";
+  if (!["tossup", "bonus"].includes(String(type)))
+    throw new PracticeError("Choose tossup or bonus questions.", 400);
   const data = {
     title: deckText(body.title, 120, true),
     description: deckText(body.description ?? "", 2000),
     published: body.published,
     audience,
     studentUids,
-    questionCount: 10,
-    type: "tossup",
+    questionCount,
+    difficultyMin,
+    difficultyMax,
+    type,
     dueAt: null,
     updatedAt: FieldValue.serverTimestamp(),
   };

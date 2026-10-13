@@ -78,7 +78,10 @@ function database(staff = { role: "teacher", teamId: "school" }) {
     runTransaction: async (work) =>
       work({
         get: async (ref) => ({
-          exists: ["teams/school/members/student", "teams/school/members/student2"].includes(ref.path),
+          exists: [
+            "teams/school/members/student",
+            "teams/school/members/student2",
+          ].includes(ref.path),
           data: () => (ref.path === "staff/teacher" ? staff : undefined),
         }),
         create: (ref, data) => writes.push({ ref, data }),
@@ -163,8 +166,44 @@ test("validates assignment text, publication, actions and update existence", asy
 });
 test("group targeting deduplicates students and team audience clears explicit targets", async () => {
   const { db, writes } = database();
-  await server.saveAssignment(db, "teacher", true, { ...base, audience: "students", studentUids: ["student", "student2", "student"] });
+  await server.saveAssignment(db, "teacher", true, {
+    ...base,
+    audience: "students",
+    studentUids: ["student", "student2", "student"],
+  });
   assert.equal(writes[0].data.studentUids.length, 2);
-  await server.saveAssignment(db, "teacher", true, { ...base, audience: "team", studentUids: ["student"] });
+  await server.saveAssignment(db, "teacher", true, {
+    ...base,
+    audience: "team",
+    studentUids: ["student"],
+  });
   assert.equal(writes[1].data.studentUids.length, 0);
+});
+test("question counts and difficulty ranges enforce integer boundaries", async () => {
+  for (const changed of [
+    { questionCount: 0 },
+    { questionCount: 501 },
+    { questionCount: 1.5 },
+    { difficultyMin: -1 },
+    { difficultyMax: 11 },
+    { difficultyMin: 5, difficultyMax: 2 },
+    { type: "invalid" },
+  ])
+    await assert.rejects(
+      server.saveAssignment(database().db, "teacher", true, {
+        ...base,
+        ...changed,
+      }),
+      (e) => e.status === 400,
+    );
+  const { db, writes } = database();
+  await server.saveAssignment(db, "teacher", true, {
+    ...base,
+    questionCount: 500,
+    difficultyMin: 0,
+    difficultyMax: 10,
+    type: "bonus",
+  });
+  assert.equal(writes[0].data.questionCount, 500);
+  assert.equal(writes[0].data.type, "bonus");
 });
