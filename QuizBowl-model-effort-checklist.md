@@ -211,8 +211,19 @@ counting rules.
 - [x] **[Low]** View student completion and performance
 - [x] **[Medium]** Create teacher-curated study decks
 - [ ] **[High]** Share teacher decks with students
-- [ ] **[Medium]** Allow students to practice and export shared decks
+- [x] **[Medium]** Allow students to practice and export shared decks
 - [ ] **[High]** Prevent unauthorized edits to teacher-created decks
+
+Task 10's nine non-High subtasks are complete. `/assignments` supports staff
+creation/editing, draft/publication, individual/group/team audiences, question
+counts/types, difficulty ranges, subject/topic requirements, local-time deadlines,
+and saved completion/performance views. Students see only their published work
+and own results. `/teacher-decks` creates private staff-curated decks with existing
+question/tag/note editing. Students can practice already-shared original decks in
+the reader and export APKG/CSV through `/decks`. The three High subtasks remain
+unchecked: automatic progress, teacher sharing, and teacher-specific edit policies.
+Missing assignment progress is not inferred from ordinary practice. See README.md
+for the saved progress contract and deferred scope.
 
 ## 11. Team Calendar & Announcements
 - [ ] **[Medium]** Build a shared team calendar

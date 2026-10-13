@@ -69,7 +69,11 @@ function Workspace({ user }: { user: User }) {
     <div className="space-y-6">
       <PageHeading
         title="Practice assignments"
-        description="Create and publish practice work for your school."
+        description={
+          data?.isStaff === false
+            ? "Your published practice work and saved results."
+            : "Create and publish practice work for your school."
+        }
       />
       <Button
         variant="outline"
@@ -431,7 +435,7 @@ function AssignmentForm({
               />
             </FormField>
             <label className="flex items-center gap-2">
-              <span>Assign to</span>
+              <span className="shrink-0">Assign to</span>
               <select
                 aria-label="Assign to"
                 className="form-select"

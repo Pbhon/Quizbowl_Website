@@ -240,6 +240,7 @@ test("deadlines normalize UTC instants and can be cleared", async () => {
     "garbage",
     "2026-10-12T10:30",
     "2026-13-12T10:30:00Z",
+    "2026-02-30T10:30:00Z",
     123,
   ])
     await assert.rejects(

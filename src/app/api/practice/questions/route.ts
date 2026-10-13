@@ -1,6 +1,7 @@
 import { normalizeQuestion, subjects, type Question } from "@/lib/practice";
 import { qbreader } from "@/lib/server/qbreader";
 import { historyQuestion } from "@/lib/server/history";
+import { exportDeck } from "@/lib/server/decks";
 import {
   authenticatePractice,
   createPracticeSession,
@@ -16,6 +17,35 @@ export async function POST(request: Request) {
         { error: "Invalid practice filters." },
         { status: 400 },
       );
+    if (body.sharedId !== undefined) {
+      if (!account)
+        throw new PracticeError("Sign in to practice a shared deck.", 401);
+      if (!Number.isInteger(body.count) || body.count < 1 || body.count > 50)
+        throw new PracticeError("Choose 1–50 deck questions per session.", 400);
+      const { deck } = await exportDeck(
+        account.db,
+        account.uid,
+        undefined,
+        body.sharedId,
+      );
+      const questions = deck.cards
+        .slice(0, body.count)
+        .map((card) => card.originalQuestion);
+      if (!questions.length)
+        throw new PracticeError(
+          "This shared deck has no questions to practice.",
+          400,
+        );
+      const sessionId = await createPracticeSession(
+        account.db,
+        account.uid,
+        questions,
+      );
+      return Response.json(
+        { questions, sessionId, deckName: deck.name },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    }
     if (body.retryAttemptId !== undefined) {
       if (!account)
         throw new PracticeError("Sign in to retry a saved question.", 401);

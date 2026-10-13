@@ -557,3 +557,46 @@ Run `pnpm test:team` for calculation, permission, receipt, and CSV tests. Fireba
 emulator browser coverage is in `tests/e2e/team-dashboard.spec.ts` for desktop and
 mobile, including role revocation, school isolation, flashcard review recording,
 assignment progress, charts, exports, failure recovery, and account switching.
+
+### Task 10: assignments and teacher curation (non-High subtasks)
+
+Verified school teachers/admins create, edit, draft, and publish assignments at
+`/assignments`. Students see only published assignments addressed to them, with
+instructions, question type/count, difficulty range 0–10, category/subcategory,
+optional topic requirement, and optional deadline. Select one student, a group of
+up to 200 current students, or the entire team. Selected groups are saved as a
+snapshot of student IDs; team assignments apply to current team members. Deadlines
+are stored as UTC ISO instants and entered/displayed in the browser's local timezone.
+Question counts support 1–500 questions and are requirements, not a single session
+size. The existing QBReader reader continues to support up to 50 per session.
+
+Completion/performance reads `teams/{teamId}/assignments/{id}/progress/{uid}`.
+`completedQuestions` is a whole-question count (bonus parts count as one question).
+Optional nonnegative integer `correct`, `incorrect`, and `skipped` fields count
+responses. Accuracy is correct / (correct + incorrect), excluding skips. Absent
+or malformed performance fields display as unknown; missing progress is not
+started. This release does not write progress or credit ordinary practice. The
+High automatic tracking subtask is still deferred. The team dashboard's existing
+assignment completion viewer continues to read the same records.
+
+Teachers curate private decks at `/teacher-decks`, using existing topic question
+retrieval, saved questions, tags, card notes, and editing. Creation records the
+verified staff creator in `curatedBy`. Adding saved questions from practice/history
+works through the usual deck picker. High teacher-sharing and teacher-specific
+edit-policy work remains deferred; existing Task 6 school-sharing/owner permissions
+remain in place. Students can study and export already-shared decks at `/decks`,
+or choose **Practice shared deck** to start a saved reader session using the first
+1–50 original questions. This source uses deck questions, so QBReader filters do
+not alter it. Starting practice and APKG export check live membership and sharing;
+revocation blocks new sessions/downloads. Already-started sessions retain their
+saved question snapshot. CSV exports use cards already loaded into the browser.
+
+Validation: assignment unit tests cover staff authorization, targeting, requirements,
+deadlines, saved result counting, student visibility, and teacher provenance.
+Firebase-emulator browser tests cover assignment editing, student isolation,
+teacher curation, shared-deck practice, APKG/CSV downloads, desktop/mobile layout,
+and sharing revocation. Run `node --test tests/assignments.test.mjs` for unit tests;
+run `tests/e2e/assignments.spec.ts` with the existing Firebase emulator setup for
+browser tests. No Firebase rules deployment is needed: assignment access uses the
+existing server authentication and staff/membership checks; direct client writes
+remain denied.

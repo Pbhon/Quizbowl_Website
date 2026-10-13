@@ -601,6 +601,15 @@ function DeckPanel({
                 Edit deck
               </Button>
             )}
+            {deck.sharedId && (
+              <Button variant="outline" asChild disabled={!deck.cards.length}>
+                <Link
+                  href={`/practice?sharedId=${encodeURIComponent(deck.sharedId)}`}
+                >
+                  Practice shared deck
+                </Link>
+              </Button>
+            )}
             <Button
               variant="outline"
               disabled={!cards.length}

@@ -45,6 +45,7 @@ function PracticeWorkspace({
   const [count, setCount] = useState(10);
   const [avoid, setAvoid] = useState(false);
   const [retryAttemptId, setRetryAttemptId] = useState("");
+  const [sharedId, setSharedId] = useState("");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
@@ -79,6 +80,7 @@ function PracticeWorkspace({
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     queueMicrotask(() => setRetryAttemptId(params.get("retryAttemptId") || ""));
+    queueMicrotask(() => setSharedId(params.get("sharedId") || ""));
     const recommendedCategory = params.get("category") || "";
     const recommendedSubcategory = params.get("subcategory") || "";
     if (Object.hasOwn(subjects, recommendedCategory)) {
@@ -133,7 +135,7 @@ function PracticeWorkspace({
       setStorageNotice(
         "Local history is unavailable. Session results will still be counted.",
       );
-      if (avoid && !retryAttemptId) {
+      if (avoid && !retryAttemptId && !sharedId) {
         setError(
           "Cannot read local history. Turn off ‘Avoid previously answered questions’ to continue.",
         );
@@ -153,6 +155,7 @@ function PracticeWorkspace({
         },
         body: JSON.stringify({
           ...(retryAttemptId ? { retryAttemptId } : {}),
+          ...(sharedId ? { sharedId } : {}),
           type,
           count,
           difficulty: difficulty === "" ? "" : Number(difficulty),
@@ -181,6 +184,10 @@ function PracticeWorkspace({
       if (!retryAttemptId && data.questions.length < count)
         setNotice(
           `Found ${data.questions.length} of ${count} requested questions. Your session uses the available matches.`,
+        );
+      if (sharedId)
+        setNotice(
+          `Practicing ${data.questions.length} original questions from “${data.deckName}”.`,
         );
     } catch (error) {
       setError(
@@ -372,140 +379,163 @@ function PracticeWorkspace({
       {notice && <Notice>{notice}</Notice>}
       {storageNotice && <Notice>{storageNotice}</Notice>}
       {stage === "setup" && (
-        <Card>
-          <CardContent>
-            <form onSubmit={start} className="space-y-6">
-              {retryAttemptId && (
-                <Notice>
-                  Retry the original missed question in a new saved session. For
-                  bonuses, all parts are included. Session filters below apply
-                  only to new random practice.
-                </Notice>
-              )}
-              {retryAttemptId && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setRetryAttemptId("");
-                    window.history.replaceState(null, "", "/practice");
-                  }}
+        <>
+          {sharedId && (
+            <div className="space-y-3">
+              <Notice>
+                Practice an available team-shared deck. The first questions in
+                the deck are used, up to your selected count; subject,
+                difficulty, and topic filters apply to QBReader sessions only.
+              </Notice>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSharedId("");
+                  window.history.replaceState(null, "", "/practice");
+                }}
+              >
+                Practice new questions instead
+              </Button>
+            </div>
+          )}
+          <Card>
+            <CardContent>
+              <form onSubmit={start} className="space-y-6">
+                {retryAttemptId && (
+                  <Notice>
+                    Retry the original missed question in a new saved session.
+                    For bonuses, all parts are included. Session filters below
+                    apply only to new random practice.
+                  </Notice>
+                )}
+                {retryAttemptId && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setRetryAttemptId("");
+                      window.history.replaceState(null, "", "/practice");
+                    }}
+                  >
+                    Practice new questions instead
+                  </Button>
+                )}
+                <fieldset
+                  disabled={busy || accountLoading}
+                  className="space-y-6"
                 >
-                  Practice new questions instead
-                </Button>
-              )}
-              <fieldset disabled={busy || accountLoading} className="space-y-6">
-                <h2 className="text-xl font-semibold">Set up your session</h2>
-                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  <FormField id="question-type" label="Question type">
-                    <select
-                      id="question-type"
-                      className="form-select"
-                      value={type}
-                      onChange={(e) =>
-                        setType(e.target.value as Question["type"])
-                      }
-                    >
-                      <option value="tossup">Tossups</option>
-                      <option value="bonus">Bonuses</option>
-                    </select>
-                  </FormField>
-                  <FormField id="difficulty" label="Difficulty">
-                    <select
-                      id="difficulty"
-                      className="form-select"
-                      value={difficulty}
-                      onChange={(e) => setDifficulty(e.target.value)}
-                    >
-                      <option value="">All difficulties</option>
-                      {Array.from({ length: 11 }, (_, n) => (
-                        <option key={n} value={n}>
-                          {n}
-                        </option>
-                      ))}
-                    </select>
-                  </FormField>
-                  <FormField
-                    id="question-count"
-                    label="Number of questions"
-                    hint="1–50 questions; bonuses include every part."
-                  >
-                    <Input
+                  <h2 className="text-xl font-semibold">Set up your session</h2>
+                  <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                    <FormField id="question-type" label="Question type">
+                      <select
+                        id="question-type"
+                        className="form-select"
+                        value={type}
+                        onChange={(e) =>
+                          setType(e.target.value as Question["type"])
+                        }
+                      >
+                        <option value="tossup">Tossups</option>
+                        <option value="bonus">Bonuses</option>
+                      </select>
+                    </FormField>
+                    <FormField id="difficulty" label="Difficulty">
+                      <select
+                        id="difficulty"
+                        className="form-select"
+                        value={difficulty}
+                        onChange={(e) => setDifficulty(e.target.value)}
+                      >
+                        <option value="">All difficulties</option>
+                        {Array.from({ length: 11 }, (_, n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        ))}
+                      </select>
+                    </FormField>
+                    <FormField
                       id="question-count"
-                      type="number"
-                      min={1}
-                      max={50}
-                      required
-                      value={count}
-                      onChange={(e) => setCount(Number(e.target.value))}
-                    />
-                  </FormField>
-                  <FormField id="category" label="Category">
-                    <select
-                      id="category"
-                      className="form-select"
-                      value={category}
-                      onChange={(e) => {
-                        setCategory(e.target.value);
-                        setSubcategory("");
-                      }}
+                      label="Number of questions"
+                      hint="1–50 questions; bonuses include every part."
                     >
-                      <option value="">All categories</option>
-                      {Object.keys(subjects).map((c) => (
-                        <option key={c}>{c}</option>
-                      ))}
-                    </select>
-                  </FormField>
-                  <FormField id="subcategory" label="Subcategory">
-                    <select
-                      id="subcategory"
-                      className="form-select"
-                      value={subcategory}
-                      onChange={(e) => setSubcategory(e.target.value)}
-                    >
-                      <option value="">All subcategories</option>
-                      {(category
-                        ? subjects[category]
-                        : Object.values(subjects).flat()
-                      ).map((c) => (
-                        <option key={c}>{c}</option>
-                      ))}
-                    </select>
-                  </FormField>
-                  <FormField
-                    id="topic"
-                    label="Specific topic"
-                    hint="Search question text and answer lines."
-                  >
-                    <Input
+                      <Input
+                        id="question-count"
+                        type="number"
+                        min={1}
+                        max={50}
+                        required
+                        value={count}
+                        onChange={(e) => setCount(Number(e.target.value))}
+                      />
+                    </FormField>
+                    <FormField id="category" label="Category">
+                      <select
+                        id="category"
+                        className="form-select"
+                        value={category}
+                        onChange={(e) => {
+                          setCategory(e.target.value);
+                          setSubcategory("");
+                        }}
+                      >
+                        <option value="">All categories</option>
+                        {Object.keys(subjects).map((c) => (
+                          <option key={c}>{c}</option>
+                        ))}
+                      </select>
+                    </FormField>
+                    <FormField id="subcategory" label="Subcategory">
+                      <select
+                        id="subcategory"
+                        className="form-select"
+                        value={subcategory}
+                        onChange={(e) => setSubcategory(e.target.value)}
+                      >
+                        <option value="">All subcategories</option>
+                        {(category
+                          ? subjects[category]
+                          : Object.values(subjects).flat()
+                        ).map((c) => (
+                          <option key={c}>{c}</option>
+                        ))}
+                      </select>
+                    </FormField>
+                    <FormField
                       id="topic"
-                      maxLength={200}
-                      placeholder="e.g. photosynthesis"
-                      value={topic}
-                      onChange={(e) => setTopic(e.target.value)}
+                      label="Specific topic"
+                      hint="Search question text and answer lines."
+                    >
+                      <Input
+                        id="topic"
+                        maxLength={200}
+                        placeholder="e.g. photosynthesis"
+                        value={topic}
+                        onChange={(e) => setTopic(e.target.value)}
+                      />
+                    </FormField>
+                  </div>
+                  <label className="flex items-start gap-3 text-sm">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={avoid}
+                      onChange={(e) => setAvoid(e.target.checked)}
                     />
-                  </FormField>
-                </div>
-                <label className="flex items-start gap-3 text-sm">
-                  <input
-                    type="checkbox"
-                    className="mt-1"
-                    checked={avoid}
-                    onChange={(e) => setAvoid(e.target.checked)}
-                  />
-                  Avoid previously answered questions
-                </label>
-                <Button disabled={busy || accountLoading} type="submit">
-                  {busy
-                    ? "Loading questions…"
-                    : retryAttemptId
-                      ? "Retry missed question"
-                      : "Start session"}
-                </Button>
-              </fieldset>
-            </form>
-          </CardContent>
-        </Card>
+                    Avoid previously answered questions
+                  </label>
+                  <Button disabled={busy || accountLoading} type="submit">
+                    {busy
+                      ? "Loading questions…"
+                      : retryAttemptId
+                        ? "Retry missed question"
+                        : "Start session"}
+                  </Button>
+                </fieldset>
+              </form>
+            </CardContent>
+          </Card>
+        </>
       )}
       {stage === "reading" && question && (
         <>

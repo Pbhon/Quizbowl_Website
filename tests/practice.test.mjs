@@ -24,20 +24,26 @@ function load(path, upstream) {
         ? load("lib/practice", upstream)
         : id === "@/lib/server/qbreader"
           ? { qbreader: upstream }
-          : id === "@/lib/server/history"
+          : id === "@/lib/server/decks"
             ? {
-                historyQuestion: async () => {
-                  throw new Error("Unexpected history retry");
+                exportDeck: async () => {
+                  throw new Error("Unexpected shared practice");
                 },
               }
-            : id === "@/lib/server/practice-persistence"
+            : id === "@/lib/server/history"
               ? {
-                  authenticatePractice: async () => null,
-                  PracticeError: class extends Error {},
+                  historyQuestion: async () => {
+                    throw new Error("Unexpected history retry");
+                  },
                 }
-              : (() => {
-                  throw new Error(`Unexpected import: ${id}`);
-                })(),
+              : id === "@/lib/server/practice-persistence"
+                ? {
+                    authenticatePractice: async () => null,
+                    PracticeError: class extends Error {},
+                  }
+                : (() => {
+                    throw new Error(`Unexpected import: ${id}`);
+                  })(),
     Response,
     URLSearchParams,
     Set,

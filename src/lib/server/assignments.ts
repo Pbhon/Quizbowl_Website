@@ -175,7 +175,12 @@ export async function saveAssignment(
       !Number.isFinite(Date.parse(data.dueAt)))
   )
     throw new PracticeError("Enter a valid deadline.", 400);
-  if (data.dueAt) data.dueAt = new Date(data.dueAt).toISOString();
+  if (data.dueAt) {
+    const canonical = new Date(data.dueAt).toISOString();
+    if (canonical !== data.dueAt.replace(/(?<!\.\d{3})Z$/, ".000Z"))
+      throw new PracticeError("Enter a valid calendar date.", 400);
+    data.dueAt = canonical;
+  }
   const ref =
     body.action === "create"
       ? db.collection(`teams/${teamId}/assignments`).doc()
