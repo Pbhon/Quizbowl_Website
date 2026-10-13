@@ -43,7 +43,7 @@ export function Navigation() {
           { href: "/profile", label: "Profile", icon: UserRound },
           { href: "/settings", label: "Settings", icon: Settings },
           ...(access.role !== "student"
-            ? [{ href: "/team", label: "Team access", icon: Users }]
+            ? [{ href: "/team", label: "Team dashboard", icon: Users }]
             : []),
         ]
       : []),

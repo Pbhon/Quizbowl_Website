@@ -172,7 +172,7 @@ identifier export reads saved results only and makes no AI calls. Older saved
 questions keep their stored plain text; new questions retain basic formatting.
 
 ## 9. Teacher/Admin Dashboard
-- [ ] **[Medium]** Display all authorized team members
+- [x] **[Medium]** Display all authorized team members
 - [ ] **[Medium]** View individual student statistics
 - [ ] **[Medium]** Track total questions attempted per student
 - [ ] **[Medium]** Track correct and incorrect attempts
@@ -259,3 +259,4 @@ questions keep their stored plain text; new questions retain basic formatting.
 - [ ] **[Medium]** AI explanations for difficult clues
 - [ ] **[High]** Anki review progress synchronization
 - [ ] **[High]** Optional support for multiple school teams
+
