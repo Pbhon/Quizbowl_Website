@@ -18,6 +18,7 @@ export type TeamDashboardData = {
   students: (TeamMember & {
     statistics: TeamStatistics;
     heatmap: HeatmapCell[];
+    participation: Participation;
   })[];
   team: TeamStatistics;
   heatmap: HeatmapCell[];
@@ -51,4 +52,40 @@ export function subjectDifficulty(
       (a, b) =>
         a.category.localeCompare(b.category) || a.difficulty - b.difficulty,
     );
+}
+
+export type Participation = {
+  lastPracticeAt: string | null;
+  sessions: number;
+  activeDays: number;
+  status: "active" | "inactive" | "never";
+};
+export function participation(
+  attempts: StatisticAttempt[],
+  now = new Date(),
+  timeZone = "UTC",
+): Participation {
+  const completed = attempts.filter(
+    (a) =>
+      ["correct", "incorrect", "skipped"].includes(a.outcome) &&
+      a.completedAt &&
+      Number.isFinite(new Date(a.completedAt).getTime()) &&
+      new Date(a.completedAt) <= now,
+  );
+  const lastPracticeAt =
+    completed
+      .map((a) => a.completedAt!)
+      .sort()
+      .at(-1) || null;
+  const daily = buildStatistics(completed, now, timeZone).activity.daily;
+  return {
+    lastPracticeAt,
+    sessions: new Set(completed.map((a) => a.sessionId)).size,
+    activeDays: daily.filter((day) => day.attempted > 0).length,
+    status: !lastPracticeAt
+      ? "never"
+      : new Date(lastPracticeAt).getTime() >= now.getTime() - 7 * 86400000
+        ? "active"
+        : "inactive",
+  };
 }

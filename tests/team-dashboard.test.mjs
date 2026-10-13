@@ -176,3 +176,11 @@ test("heatmap separates categories and difficulties and excludes pending and fut
   assert.equal(cells[0].questions, 1);
   assert.equal(cells[1].accuracy, null);
 });
+test("participation includes skips but excludes prompts and future records", () => {
+ const now = new Date("2026-10-12T16:00:00Z");
+ const a = {sessionId:"s",questionIndex:0,part:0,outcome:"skipped",completedAt:"2026-10-12T12:00:00Z",question:{category:"Science",difficulty:4}};
+ assert.equal(teamHelpers.participation([],now).status,"never");
+ const result = teamHelpers.participation([a,{...a,part:1},{...a,sessionId:"prompt",outcome:"prompt"},{...a,sessionId:"future",completedAt:"2027-01-01T00:00:00Z"}],now);
+ assert.equal(result.status,"active"); assert.equal(result.sessions,1); assert.equal(result.activeDays,1);
+ assert.equal(teamHelpers.participation([{...a,completedAt:"2026-09-01T12:00:00Z"}],now).status,"inactive");
+});

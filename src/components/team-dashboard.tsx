@@ -165,6 +165,7 @@ function Workspace({ user }: { user: User }) {
               </div>
             </section>
           )}
+          <ParticipationTable students={data?.students || []} />
           <ul className="divide-y">
             {members.map((member) => (
               <li
@@ -440,6 +441,115 @@ function WeakTopics({ rows }: { rows: Breakdown[] }) {
             </li>
           ))}
         </ul>
+      )}
+    </section>
+  );
+}
+
+function ParticipationTable({
+  students,
+}: {
+  students: TeamDashboardData["students"];
+}) {
+  const [filter, setFilter] = useState("all"),
+    [search, setSearch] = useState("");
+  const rows = students.filter(
+    (s) =>
+      (filter === "all" || s.participation.status === filter) &&
+      s.displayName.toLowerCase().includes(search.toLowerCase()),
+  );
+  return (
+    <section className="space-y-3">
+      <h2 className="text-xl font-semibold">Student participation</h2>
+      <p className="text-sm text-muted-foreground">
+        Active means a saved completed response in the last seven days. Active
+        days covers the last 30 calendar days. Sessions count sessions with
+        completed responses.
+      </p>
+      <div className="flex flex-wrap gap-3">
+        <label>
+          Search students
+          <input
+            className="form-select mt-2"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </label>
+        <label>
+          Participation filter
+          <select
+            className="form-select mt-2"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            <option value="all">All students</option>
+            <option value="active">Active in last seven days</option>
+            <option value="inactive">Inactive for seven days</option>
+            <option value="never">No saved practice</option>
+          </select>
+        </label>
+      </div>
+      {!rows.length ? (
+        <Notice>No students match this filter.</Notice>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <caption className="sr-only">Student participation</caption>
+            <thead>
+              <tr>
+                {[
+                  "Student",
+                  "Status",
+                  "Questions",
+                  "Correct",
+                  "Incorrect",
+                  "Accuracy",
+                  "Today",
+                  "This week",
+                  "This month",
+                  "Active days",
+                  "Sessions",
+                  "Last practice",
+                ].map((label) => (
+                  <th className="p-2" scope="col" key={label}>
+                    {label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((s) => (
+                <tr className="border-t" key={s.uid}>
+                  <th scope="row" className="p-2">
+                    {s.displayName}
+                  </th>
+                  {[
+                    s.participation.status,
+                    s.statistics.totalQuestions,
+                    s.statistics.total.correct,
+                    s.statistics.total.incorrect,
+                    percent(s.statistics.total.accuracy),
+                    s.statistics.current.daily.questions,
+                    s.statistics.current.weekly.questions,
+                    s.statistics.current.monthly.questions,
+                    s.participation.activeDays,
+                    s.participation.sessions,
+                    s.participation.lastPracticeAt
+                      ? new Intl.DateTimeFormat(undefined, {
+                          dateStyle: "medium",
+                          timeZone: s.statistics.timeZone,
+                        }).format(new Date(s.participation.lastPracticeAt))
+                      : "Never",
+                  ].map((value, i) => (
+                    <td className="p-2" key={i}>
+                      {value}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );

@@ -1,5 +1,5 @@
 import "server-only";
-import { subjectDifficulty } from "@/lib/team-dashboard";
+import { subjectDifficulty, participation } from "@/lib/team-dashboard";
 import type { Firestore } from "firebase-admin/firestore";
 import { siteTeam } from "./site-team";
 import { PracticeError } from "./practice-persistence";
@@ -73,6 +73,7 @@ export async function loadTeamDashboard(
     ...member,
     statistics: buildStatistics(history, now, timeZone),
     heatmap: subjectDifficulty(history, now, timeZone),
+    participation: participation(history, now, timeZone),
   }));
   const allAttempts = histories.flatMap(({ member, history }) =>
     history.map((attempt) => ({
