@@ -5,7 +5,8 @@ import { deckText } from "./decks";
 import { PracticeError } from "./practice-persistence";
 import { documentId } from "./history";
 import { timestampISO } from "./dashboard";
-import type { PracticeAssignment } from "@/lib/assignments";
+import { assignmentResult, type PracticeAssignment } from "@/lib/assignments";
+import { siteTeam } from "./site-team";
 import { subjects } from "@/lib/practice";
 
 export async function assignmentWorkspace(
@@ -13,24 +14,83 @@ export async function assignmentWorkspace(
   uid: string,
   verified: boolean,
 ) {
-  const teamId = await requireTeamStaff(db, uid, verified);
+  const teamId = siteTeam().id;
+  const staff = (await db.doc(`staff/${uid}`).get()).data();
+  const isStaff =
+    verified &&
+    staff?.teamId === teamId &&
+    ["teacher", "admin"].includes(staff.role);
+  if (
+    !isStaff &&
+    !(await db.doc(`teams/${teamId}/members/${uid}`).get()).exists
+  )
+    throw new PracticeError("School membership required.", 403);
   const [records, roster] = await Promise.all([
     db.collection(`teams/${teamId}/assignments`).get(),
-    loadTeamRoster(db, teamId),
+    isStaff
+      ? loadTeamRoster(db, teamId)
+      : Promise.resolve([
+          { uid, displayName: "You", role: "student" as const },
+        ]),
   ]);
-  await requireTeamStaff(db, uid, verified);
-  return {
-    assignments: records.docs
-      .map(
+  const students = roster.filter((member) => member.role === "student");
+  const assignments = await Promise.all(
+    records.docs
+      .filter(
         (doc) =>
-          ({
-            ...doc.data(),
-            id: doc.id,
-            dueAt: timestampISO(doc.data().dueAt),
-          }) as PracticeAssignment,
+          isStaff ||
+          assignmentResult(doc.id, doc.data(), undefined, uid, "You") !== null,
       )
-      .sort((a, b) => a.title.localeCompare(b.title)),
-    students: roster.filter((member) => member.role === "student"),
+      .map(async (doc) => {
+        const normalized = {
+          ...doc.data(),
+          dueAt: timestampISO(doc.data().dueAt),
+        };
+        const results = await Promise.all(
+          students.map(async (student) => {
+            if (
+              !assignmentResult(
+                doc.id,
+                normalized,
+                undefined,
+                student.uid,
+                student.displayName,
+              )
+            )
+              return null;
+            const progress = (
+              await doc.ref.collection("progress").doc(student.uid).get()
+            ).data();
+            return assignmentResult(
+              doc.id,
+              normalized,
+              progress,
+              student.uid,
+              student.displayName,
+            );
+          }),
+        );
+        return {
+          ...normalized,
+          id: doc.id,
+          results: results.filter((result) => result !== null),
+        } as PracticeAssignment;
+      }),
+  );
+  if (isStaff) await requireTeamStaff(db, uid, verified);
+  else if (!(await db.doc(`teams/${teamId}/members/${uid}`).get()).exists)
+    throw new PracticeError("School membership required.", 403);
+  const current = await db.collection(`teams/${teamId}/members`).get();
+  if (
+    students.some(
+      (student) => !current.docs.some((doc) => doc.id === student.uid),
+    )
+  )
+    throw new PracticeError("Roster changed. Please refresh assignments.", 409);
+  return {
+    isStaff,
+    assignments: assignments.sort((a, b) => a.title.localeCompare(b.title)),
+    students: isStaff ? students : [],
   };
 }
 
@@ -50,7 +110,7 @@ export async function saveAssignment(
     throw new PracticeError("Choose an assignment audience.", 400);
   if (
     !Array.isArray(body.studentUids ?? []) ||
-    (body.studentUids as unknown[] | undefined)?.length! > 200
+    ((body.studentUids as unknown[] | undefined)?.length ?? 0) > 200
   )
     throw new PracticeError("Choose up to 200 students.", 400);
   const studentUids =

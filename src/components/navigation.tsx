@@ -40,13 +40,11 @@ export function Navigation() {
       ? [
           { href: "/dashboard", label: "My dashboard", icon: LayoutDashboard },
           { href: "/history", label: "Question history", icon: History },
+          { href: "/assignments", label: "Assignments", icon: BookOpen },
           { href: "/profile", label: "Profile", icon: UserRound },
           { href: "/settings", label: "Settings", icon: Settings },
           ...(access.role !== "student"
-            ? [
-                { href: "/team", label: "Team dashboard", icon: Users },
-                { href: "/assignments", label: "Assignments", icon: BookOpen },
-              ]
+            ? [{ href: "/team", label: "Team dashboard", icon: Users }]
             : []),
         ]
       : []),

@@ -35,7 +35,12 @@ const roster = [
   { uid: "student", displayName: "Student", role: "student" },
   { uid: "teacher", role: "teacher" },
 ];
+const statistics = load("src/lib/statistics.ts", {});
+const team = load("src/lib/team-dashboard.ts", { "./statistics": statistics });
+const helpers = load("src/lib/assignments.ts", { "./team-dashboard": team });
 const imports = {
+  "@/lib/assignments": helpers,
+  "./site-team": { siteTeam: () => ({ id: "school" }) },
   "@/lib/practice": load("src/lib/practice.ts", {}),
   "server-only": {},
   "firebase-admin/firestore": {
@@ -249,4 +254,119 @@ test("deadlines normalize UTC instants and can be cleared", async () => {
   assert.equal(writes[0].data.dueAt, "2026-10-20T23:30:00.000Z");
   await server.saveAssignment(db, "teacher", true, { ...base, dueAt: null });
   assert.equal(writes[1].data.dueAt, null);
+});
+test("completion clamps saved counts and leaves missing performance unknown", () => {
+  const assignment = { ...base, audience: "team", questionCount: 10 };
+  const empty = helpers.assignmentResult(
+    "a",
+    assignment,
+    undefined,
+    "student",
+    "Student",
+  );
+  assert.equal(empty.status, "not started");
+  assert.equal(empty.accuracy, null);
+  const result = helpers.assignmentResult(
+    "a",
+    assignment,
+    { completedQuestions: 20, correct: 8, incorrect: 2, skipped: 1 },
+    "student",
+    "Student",
+  );
+  assert.equal(result.completedQuestions, 10);
+  assert.equal(result.accuracy, 80);
+  assert.equal(result.status, "completed");
+  assert.equal(
+    helpers.assignmentResult(
+      "a",
+      { ...assignment, published: false },
+      undefined,
+      "student",
+      "Student",
+    ),
+    null,
+  );
+});
+test("student workspace excludes drafts and other students' work and progress", async () => {
+  const records = new Map([
+    ["teams/school/members/student", {}],
+    ["teams/school/members/student2", {}],
+    [
+      "teams/school/assignments/team",
+      { ...base, audience: "team", questionCount: 10 },
+    ],
+    [
+      "teams/school/assignments/own",
+      {
+        ...base,
+        audience: "students",
+        studentUids: ["student"],
+        questionCount: 10,
+      },
+    ],
+    [
+      "teams/school/assignments/other",
+      {
+        ...base,
+        audience: "students",
+        studentUids: ["student2"],
+        questionCount: 10,
+      },
+    ],
+    [
+      "teams/school/assignments/draft",
+      { ...base, audience: "team", published: false },
+    ],
+    [
+      "teams/school/assignments/own/progress/student",
+      { completedQuestions: 3, correct: 2, incorrect: 1, skipped: 0 },
+    ],
+    [
+      "teams/school/assignments/own/progress/student2",
+      { completedQuestions: 99 },
+    ],
+  ]);
+  const db = {
+    doc: (path) => ({
+      id: path.split("/").at(-1),
+      collection: (name) => db.collection(`${path}/${name}`),
+      get: async () => ({
+        exists: records.has(path),
+        data: () => records.get(path),
+      }),
+    }),
+    collection: (path) => ({
+      doc: (id) => db.doc(`${path}/${id}`),
+      get: async () => ({
+        docs: [...records]
+          .filter(
+            ([key]) =>
+              key.startsWith(`${path}/`) &&
+              !key.slice(path.length + 1).includes("/"),
+          )
+          .map(([key, data]) => ({
+            id: key.split("/").at(-1),
+            data: () => data,
+            ref: db.doc(key),
+          })),
+      }),
+    }),
+  };
+  const data = await server.assignmentWorkspace(db, "student", true);
+  assert.equal(data.isStaff, false);
+  assert.equal(data.students.length, 0);
+  assert.deepEqual(Array.from(data.assignments, (a) => a.id).sort(), [
+    "own",
+    "team",
+  ]);
+  assert.equal(
+    data.assignments.find((a) => a.id === "own").results[0].completedQuestions,
+    3,
+  );
+  assert.equal(
+    data.assignments.every((a) =>
+      a.results.every((row) => row.uid === "student"),
+    ),
+    true,
+  );
 });

@@ -36,7 +36,7 @@ async function requestAssignments(
 export function Assignments() {
   const { user, access } = useAuth();
   return (
-    <AccountGuard staff>
+    <AccountGuard>
       {user && (
         <Workspace
           key={`${user.uid}:${access.role}:${access.teamId}`}
@@ -85,16 +85,18 @@ function Workspace({ user }: { user: User }) {
       {!data && !error && <Notice>Loading assignments…</Notice>}
       {data && (
         <>
-          <AssignmentForm
-            key={editing?.id || "new"}
-            user={user}
-            assignment={editing}
-            data={data}
-            done={() => {
-              setEditing(null);
-              setRevision((n) => n + 1);
-            }}
-          />
+          {data.isStaff && (
+            <AssignmentForm
+              key={editing?.id || "new"}
+              user={user}
+              assignment={editing}
+              data={data}
+              done={() => {
+                setEditing(null);
+                setRevision((n) => n + 1);
+              }}
+            />
+          )}
           {editing && (
             <Button variant="outline" onClick={() => setEditing(null)}>
               Cancel editing
@@ -110,12 +112,97 @@ function Workspace({ user }: { user: User }) {
                   {assignment.published ? "Published" : "Draft"} ·{" "}
                   {assignment.questionCount} {assignment.type} questions
                 </p>
-                <Button
-                  variant="outline"
-                  onClick={() => setEditing(assignment)}
-                >
-                  Edit assignment
-                </Button>
+                <p>
+                  Difficulty {assignment.difficultyMin ?? 0}–
+                  {assignment.difficultyMax ?? 10} ·{" "}
+                  {assignment.category || "All categories"}
+                  {assignment.subcategory ? ` / ${assignment.subcategory}` : ""}
+                  {assignment.topic ? ` · Topic: ${assignment.topic}` : ""}
+                </p>
+                <p>
+                  Deadline:{" "}
+                  {assignment.dueAt
+                    ? new Date(assignment.dueAt).toLocaleString()
+                    : "None"}
+                </p>
+                {data.isStaff && (
+                  <p>
+                    Audience:{" "}
+                    {assignment.audience === "team"
+                      ? "Entire team"
+                      : assignment.studentUids
+                          .map(
+                            (uid) =>
+                              data.students.find(
+                                (student) => student.uid === uid,
+                              )?.displayName || "Former student",
+                          )
+                          .join(", ")}
+                  </p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Completion and performance use saved assignment records.
+                  Automatic progress tracking is pending.
+                </p>
+                {assignment.results?.length ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <caption className="sr-only">
+                        Assignment completion and performance
+                      </caption>
+                      <thead>
+                        <tr>
+                          {[
+                            "Student",
+                            "Questions",
+                            "Status",
+                            "Correct",
+                            "Incorrect",
+                            "Skipped",
+                            "Accuracy",
+                          ].map((label) => (
+                            <th className="p-2" key={label}>
+                              {label}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {assignment.results.map((result) => (
+                          <tr key={result.uid}>
+                            <td className="p-2">{result.displayName}</td>
+                            <td className="p-2">
+                              {result.completedQuestions}/{result.questionCount}
+                            </td>
+                            <td className="p-2">{result.status}</td>
+                            <td className="p-2">{result.correct ?? "—"}</td>
+                            <td className="p-2">{result.incorrect ?? "—"}</td>
+                            <td className="p-2">{result.skipped ?? "—"}</td>
+                            <td className="p-2">
+                              {result.accuracy === null
+                                ? "—"
+                                : `${result.accuracy.toFixed(1)}%`}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <Notice>
+                    {assignment.published
+                      ? "No current assigned students."
+                      : "Publish to view completion."}
+                  </Notice>
+                )}
+                {data.isStaff && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setEditing(assignment)}
+                  >
+                    Edit assignment
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}

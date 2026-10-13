@@ -208,7 +208,7 @@ counting rules.
 - [x] **[Low]** Set category, subcategory, and topic requirements
 - [x] **[Low]** Set assignment deadlines
 - [ ] **[High]** Automatically track assignment progress
-- [ ] **[Low]** View student completion and performance
+- [x] **[Low]** View student completion and performance
 - [ ] **[Medium]** Create teacher-curated study decks
 - [ ] **[High]** Share teacher decks with students
 - [ ] **[Medium]** Allow students to practice and export shared decks
