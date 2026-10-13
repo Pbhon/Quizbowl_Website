@@ -139,6 +139,7 @@ function serializeDeck(
   });
   return {
     id: sharedId ? `shared-${sharedId}` : doc.id,
+    teacherCurated: data.curatedBy === doc.ref.parent.parent?.id,
     canEdit,
     sharedId: sharedId || null,
     visibility: data.visibility === "team" ? "team" : "private",
@@ -159,6 +160,7 @@ export async function mutateDeck(
   if (body.action === "create") {
     const ref = db.collection(`users/${uid}/decks`).doc();
     const data = {
+      ...(body.teacherCurated === true ? { curatedBy: uid } : {}),
       name: deckText(body.name, 80, true),
       description: deckText(body.description ?? "", 1000),
       tags: deckTags(body.tags ?? []),
@@ -166,6 +168,15 @@ export async function mutateDeck(
       updatedAt: stamp(),
     };
     await db.runTransaction(async (tx) => {
+      if (body.teacherCurated === true) {
+        const staff = (await tx.get(db.doc(`staff/${uid}`))).data();
+        if (
+          !staff ||
+          staff.teamId !== siteTeam().id ||
+          !["teacher", "admin"].includes(staff.role)
+        )
+          throw new PracticeError("Staff access required.", 403);
+      }
       const audience = await audienceFields(
         db,
         tx,

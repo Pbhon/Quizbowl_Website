@@ -211,15 +211,31 @@ export function QuestionDeckActions({
   );
 }
 
-export function StudyDecks() {
+export function StudyDecks({
+  teacherCurated = false,
+}: {
+  teacherCurated?: boolean;
+}) {
   const { user } = useAuth();
   return (
-    <AccountGuard>
-      {user && <DeckWorkspace key={user.uid} user={user} />}
+    <AccountGuard staff={teacherCurated}>
+      {user && (
+        <DeckWorkspace
+          key={user.uid}
+          user={user}
+          teacherCurated={teacherCurated}
+        />
+      )}
     </AccountGuard>
   );
 }
-function DeckWorkspace({ user }: { user: User }) {
+function DeckWorkspace({
+  user,
+  teacherCurated,
+}: {
+  user: User;
+  teacherCurated: boolean;
+}) {
   const [decks, setDecks] = useState<StudyDeck[] | null>(null);
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState("");
@@ -241,10 +257,18 @@ function DeckWorkspace({ user }: { user: User }) {
     return () => controller.abort();
   }, [user, revision]);
   const refresh = () => setRevision((n) => n + 1);
-  const visibleDecks = decks?.filter((deck) => deck.visibility === visibility);
+  const visibleDecks = decks?.filter(
+    (deck) =>
+      deck.visibility === visibility &&
+      (!teacherCurated || (deck.teacherCurated && deck.canEdit)),
+  );
   return (
     <div className="space-y-6">
-      <CreateDeck user={user} refresh={refresh} />
+      <CreateDeck
+        user={user}
+        refresh={refresh}
+        teacherCurated={teacherCurated}
+      />
       <div className="flex flex-wrap gap-3">
         <Button variant="outline" asChild>
           <Link href="/history">Save questions from history</Link>
@@ -302,7 +326,15 @@ function DeckWorkspace({ user }: { user: User }) {
     </div>
   );
 }
-function CreateDeck({ user, refresh }: { user: User; refresh: () => void }) {
+function CreateDeck({
+  user,
+  refresh,
+  teacherCurated,
+}: {
+  user: User;
+  refresh: () => void;
+  teacherCurated: boolean;
+}) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
@@ -363,6 +395,7 @@ function CreateDeck({ user, refresh }: { user: User; refresh: () => void }) {
         (
           await deckRequest(user, {
             action: "create",
+            teacherCurated,
             name,
             description,
             tags: tagsFrom(tags),
@@ -407,11 +440,13 @@ function CreateDeck({ user, refresh }: { user: User; refresh: () => void }) {
         <h2 className="text-xl font-semibold">Create a study deck</h2>
         <form onSubmit={create} className="space-y-4">
           <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-2">
-            <VisibilityField
-              id="create-visibility"
-              value={visibility}
-              onChange={setVisibility}
-            />
+            {!teacherCurated && (
+              <VisibilityField
+                id="create-visibility"
+                value={visibility}
+                onChange={setVisibility}
+              />
+            )}
             <FormField id="create-name" label="Deck name">
               <Input
                 id="create-name"

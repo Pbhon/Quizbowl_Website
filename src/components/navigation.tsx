@@ -44,7 +44,14 @@ export function Navigation() {
           { href: "/profile", label: "Profile", icon: UserRound },
           { href: "/settings", label: "Settings", icon: Settings },
           ...(access.role !== "student"
-            ? [{ href: "/team", label: "Team dashboard", icon: Users }]
+            ? [
+                { href: "/team", label: "Team dashboard", icon: Users },
+                {
+                  href: "/teacher-decks",
+                  label: "Teacher decks",
+                  icon: Layers,
+                },
+              ]
             : []),
         ]
       : []),

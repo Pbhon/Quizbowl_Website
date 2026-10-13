@@ -43,6 +43,7 @@ export type SavedCard = {
   identifiers?: IdentifierCard[];
 };
 export type StudyDeck = {
+  teacherCurated?: boolean;
   id: string;
   canEdit: boolean;
   sharedId: string | null;

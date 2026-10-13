@@ -209,7 +209,7 @@ counting rules.
 - [x] **[Low]** Set assignment deadlines
 - [ ] **[High]** Automatically track assignment progress
 - [x] **[Low]** View student completion and performance
-- [ ] **[Medium]** Create teacher-curated study decks
+- [x] **[Medium]** Create teacher-curated study decks
 - [ ] **[High]** Share teacher decks with students
 - [ ] **[Medium]** Allow students to practice and export shared decks
 - [ ] **[High]** Prevent unauthorized edits to teacher-created decks

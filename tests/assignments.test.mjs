@@ -370,3 +370,35 @@ test("student workspace excludes drafts and other students' work and progress", 
     true,
   );
 });
+const deckServer = load("src/lib/server/decks.ts", {
+  "server-only": {},
+  "node:crypto": {},
+  "firebase-admin/firestore": imports["firebase-admin/firestore"],
+  "@/lib/decks": {},
+  "./history": imports["./history"],
+  "./practice-persistence": { PracticeError },
+  "./site-team": imports["./site-team"],
+  "./deck-sharing": {
+    audienceFields: async () => ({ visibility: "private", teamId: null }),
+    writeAudience: () => {},
+  },
+});
+test("teacher curation preserves author provenance and checks current staff", async () => {
+  const { db, writes } = database();
+  const result = await deckServer.mutateDeck(db, "teacher", {
+    action: "create",
+    name: "Biology",
+    teacherCurated: true,
+  });
+  assert.equal(result.deckId, "new");
+  assert.equal(writes[0].data.curatedBy, "teacher");
+  assert.equal(writes[0].data.visibility, "private");
+  await assert.rejects(
+    deckServer.mutateDeck(
+      database({ role: "student", teamId: "school" }).db,
+      "teacher",
+      { action: "create", name: "Biology", teacherCurated: true },
+    ),
+    (e) => e.status === 403,
+  );
+});
