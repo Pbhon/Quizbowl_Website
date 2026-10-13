@@ -101,6 +101,9 @@ function Workspace({ user }: { user: User }) {
           </label>
           {statistics && (
             <section className="space-y-4" aria-label="Student statistics">
+              <p className="text-2xl font-semibold">
+                Questions attempted: {statistics.totalQuestions}
+              </p>
               <h2 className="text-xl font-semibold">
                 {selected
                   ? members.find((m) => m.uid === selected)?.displayName
@@ -126,6 +129,15 @@ function Workspace({ user }: { user: User }) {
               >
                 <span>{member.displayName}</span>
                 <span>{member.role}</span>
+                {data?.students.find((s) => s.uid === member.uid) && (
+                  <span>
+                    Questions:{" "}
+                    {
+                      data.students.find((s) => s.uid === member.uid)!
+                        .statistics.totalQuestions
+                    }
+                  </span>
+                )}
               </li>
             ))}
           </ul>

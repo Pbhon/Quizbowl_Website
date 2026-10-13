@@ -174,7 +174,7 @@ questions keep their stored plain text; new questions retain basic formatting.
 ## 9. Teacher/Admin Dashboard
 - [x] **[Medium]** Display all authorized team members
 - [x] **[Medium]** View individual student statistics
-- [ ] **[Medium]** Track total questions attempted per student
+- [x] **[Medium]** Track total questions attempted per student
 - [ ] **[Medium]** Track correct and incorrect attempts
 - [ ] **[Medium]** Compare accuracy across subjects and difficulties
 - [ ] **[Medium]** Show daily, weekly, and monthly practice activity
@@ -259,5 +259,6 @@ questions keep their stored plain text; new questions retain basic formatting.
 - [ ] **[Medium]** AI explanations for difficult clues
 - [ ] **[High]** Anki review progress synchronization
 - [ ] **[High]** Optional support for multiple school teams
+
 
 
