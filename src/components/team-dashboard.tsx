@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { User } from "firebase/auth";
 import { useAuth } from "./auth-provider";
 import { AccountGuard } from "./account-guard";
@@ -139,6 +140,7 @@ function Workspace({ user }: { user: User }) {
                   </div>
                 ))}
               </div>
+              <WeakTopics rows={statistics.recommendations} />
               <Activity statistics={statistics} />
               <Heatmap
                 cells={
@@ -400,6 +402,44 @@ function Heatmap({ cells }: { cells: HeatmapCell[] }) {
             </tbody>
           </table>
         </div>
+      )}
+    </section>
+  );
+}
+
+function WeakTopics({ rows }: { rows: Breakdown[] }) {
+  return (
+    <section className="rounded-xl border bg-card p-4">
+      <h3 className="mb-2 font-semibold">Areas for improvement</h3>
+      <p className="text-sm text-muted-foreground">
+        Lowest subcategory accuracies below 70%, with at least three scored
+        responses. Skips do not lower accuracy.
+      </p>
+      {rows.length === 0 ? (
+        <p className="mt-3">
+          No weak areas with enough evidence yet. Review the subject comparison
+          for gaps in practice.
+        </p>
+      ) : (
+        <ul className="divide-y">
+          {rows.map((row) => (
+            <li
+              className="flex flex-wrap items-center justify-between gap-3 py-3"
+              key={`${row.category}:${row.label}`}
+            >
+              <span>
+                {row.category} / {row.label}: {percent(row.accuracy)} (
+                {row.correct + row.incorrect} scored responses)
+              </span>
+              <Link
+                className="text-sm font-semibold underline"
+                href={`/practice?category=${encodeURIComponent(row.category!)}&subcategory=${encodeURIComponent(row.label)}`}
+              >
+                Open focused practice
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );

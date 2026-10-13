@@ -180,7 +180,7 @@ questions keep their stored plain text; new questions retain basic formatting.
 - [x] **[Medium]** Show daily, weekly, and monthly practice activity
 - [x] **[Low]** Visualize performance trends
 - [x] **[Low]** Create subject-by-difficulty heatmaps
-- [ ] **[Medium]** Identify weak topics and areas for improvement
+- [x] **[Medium]** Identify weak topics and areas for improvement
 - [ ] **[Medium]** Monitor student participation
 - [ ] **[Low]** View assignment completion
 - [ ] **[Medium]** Track student deck and review activity
@@ -259,6 +259,7 @@ questions keep their stored plain text; new questions retain basic formatting.
 - [ ] **[Medium]** AI explanations for difficult clues
 - [ ] **[High]** Anki review progress synchronization
 - [ ] **[High]** Optional support for multiple school teams
+
 
 
 
