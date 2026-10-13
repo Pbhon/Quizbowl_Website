@@ -272,10 +272,65 @@ function Activity({ statistics }: { statistics: TeamDashboardData["team"] }) {
           <option value="monthly">Monthly</option>
         </select>
       </label>
+      <Trend rows={statistics.activity[period]} />
       <PerformanceTable
         title={`${period} practice`}
         rows={statistics.activity[period]}
       />
     </section>
+  );
+}
+
+function Trend({ rows }: { rows: Breakdown[] }) {
+  const [metric, setMetric] = useState<"questions" | "accuracy">("questions");
+  const [selected, setSelected] = useState("");
+  const max =
+    metric === "accuracy"
+      ? 100
+      : Math.max(1, ...rows.map((row) => row.questions));
+  const active =
+    rows.find((row) => row.label === selected) || rows[rows.length - 1];
+  return (
+    <div className="space-y-3 rounded-xl border bg-card p-4">
+      <label>
+        Chart metric
+        <select
+          className="form-select mt-2"
+          value={metric}
+          onChange={(e) => setMetric(e.target.value as typeof metric)}
+        >
+          <option value="questions">Questions</option>
+          <option value="accuracy">Accuracy</option>
+        </select>
+      </label>
+      <div
+        role="group"
+        aria-label="Performance trend chart"
+        className="flex h-44 items-end gap-1"
+      >
+        {rows.map((row) => (
+          <button
+            type="button"
+            key={row.label}
+            aria-pressed={active.label === row.label}
+            aria-label={`${row.label}: ${row.questions} questions, ${percent(row.accuracy)} accuracy`}
+            title={`${row.label}: ${metric === "accuracy" ? percent(row.accuracy) : row.questions}`}
+            onClick={() => setSelected(row.label)}
+            className="flex h-full min-w-0 flex-1 items-end rounded-sm bg-accent focus-visible:outline-2 focus-visible:outline-primary"
+          >
+            <span
+              className="w-full rounded-sm bg-primary"
+              style={{
+                height: `${Math.max(2, ((row[metric] || 0) / max) * 100)}%`,
+              }}
+            />
+          </button>
+        ))}
+      </div>
+      <p role="status">
+        {active.label}: {active.questions} questions · {active.correct} correct
+        · {active.incorrect} incorrect · {percent(active.accuracy)} accuracy
+      </p>
+    </div>
   );
 }
