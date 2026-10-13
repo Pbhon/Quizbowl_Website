@@ -6,6 +6,7 @@ import { AccountGuard } from "./account-guard";
 import { PageHeading } from "./page-heading";
 import { Notice } from "./form-field";
 import { Button } from "./ui/button";
+import type { Breakdown } from "@/lib/statistics";
 import type { TeamDashboardData } from "@/lib/team-dashboard";
 export type TeamMember = {
   uid: string;
@@ -128,6 +129,20 @@ function Workspace({ user }: { user: User }) {
                 Accuracy excludes skipped responses and pending clarifications.
                 Bonus parts count separately; questions count once per session.
               </p>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <PerformanceTable
+                  title="Accuracy by subject"
+                  rows={statistics.categories}
+                />
+                <PerformanceTable
+                  title="Accuracy by difficulty"
+                  rows={statistics.difficulties}
+                />
+                <PerformanceTable
+                  title="Accuracy by subcategory"
+                  rows={statistics.subcategories}
+                />
+              </div>
             </section>
           )}
           <ul className="divide-y">
@@ -153,5 +168,70 @@ function Workspace({ user }: { user: User }) {
         </>
       )}
     </div>
+  );
+}
+
+const percent = (value: number | null) =>
+  value === null ? "—" : `${value.toFixed(1)}%`;
+function PerformanceTable({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: Breakdown[];
+}) {
+  return (
+    <section className="min-w-0 rounded-xl border bg-card p-4">
+      <h3 className="mb-3 font-semibold">{title}</h3>
+      {!rows.length ? (
+        <p>No completed practice yet.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <caption className="sr-only">{title}</caption>
+            <thead>
+              <tr>
+                {[
+                  "Area",
+                  "Questions",
+                  "Correct",
+                  "Incorrect",
+                  "Skipped",
+                  "Accuracy",
+                ].map((label) => (
+                  <th className="px-2 py-2" key={label} scope="col">
+                    {label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr
+                  className="border-t"
+                  key={`${row.category || ""}:${row.label}`}
+                >
+                  <th className="px-2 py-2 font-medium" scope="row">
+                    {row.category ? `${row.category} / ` : ""}
+                    {row.label}
+                  </th>
+                  {[
+                    row.questions,
+                    row.correct,
+                    row.incorrect,
+                    row.skipped,
+                    percent(row.accuracy),
+                  ].map((value, index) => (
+                    <td className="px-2 py-2" key={index}>
+                      {value}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
