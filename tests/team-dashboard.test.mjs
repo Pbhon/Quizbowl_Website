@@ -4,7 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import ts from "typescript";
 function load(path, imports = {}) {
-  const module = { exports: {} };
+  const compiledModule = { exports: {} };
   vm.runInNewContext(
     ts.transpileModule(readFileSync(path, "utf8"), {
       compilerOptions: {
@@ -13,8 +13,8 @@ function load(path, imports = {}) {
       },
     }).outputText,
     {
-      module,
-      exports: module.exports,
+      module: compiledModule,
+      exports: compiledModule.exports,
       require: (id) => {
         if (id in imports) return imports[id];
         throw Error(id);
@@ -26,7 +26,7 @@ function load(path, imports = {}) {
       WeakMap,
     },
   );
-  return module.exports;
+  return compiledModule.exports;
 }
 class PracticeError extends Error {
   constructor(message, status) {
@@ -290,25 +290,168 @@ test("assignment completion enforces publication and audience and handles progre
   );
 });
 const study = load("src/lib/server/study-activity.ts", {
- "server-only":{}, "firebase-admin/firestore":{FieldValue:{serverTimestamp:()=>"stamp"}}, "./history":{documentId: v => {if(typeof v !== "string" || !/^[a-zA-Z0-9_-]{1,200}$/.test(v)) throw new PracticeError("Invalid",400); return v;}}, "./deck-sharing":{readableShare:async()=>{throw new PracticeError("Shared unavailable",404);}}, "./practice-persistence":{PracticeError}, "./dashboard":{timestampISO:v=>typeof v === "string" ? v : null}, "@/lib/statistics":stats
+  "server-only": {},
+  "firebase-admin/firestore": {
+    FieldValue: { serverTimestamp: () => "stamp" },
+  },
+  "./history": {
+    documentId: (v) => {
+      if (typeof v !== "string" || !/^[a-zA-Z0-9_-]{1,200}$/.test(v))
+        throw new PracticeError("Invalid", 400);
+      return v;
+    },
+  },
+  "./deck-sharing": {
+    readableShare: async () => {
+      throw new PracticeError("Shared unavailable", 404);
+    },
+  },
+  "./practice-persistence": { PracticeError },
+  "./dashboard": { timestampISO: (v) => (typeof v === "string" ? v : null) },
+  "@/lib/statistics": stats,
 });
-test("review receipts deduplicate retries, reject conflicting reuse, and require live card access", async()=>{
- const records = new Map();
- const ref = path=>({path,collection:name=>({doc:id=>ref(`${path}/${name}/${id}`)})});
- records.set("users/alice/decks/d",{}); records.set("users/alice/decks/d/questions/c",{}); records.set("users/alice/decks/d/questions/other",{});
- const tx = {get:async r=>({exists:records.has(r.path),data:()=>records.get(r.path),ref:r}),create:(r,data)=>records.set(r.path,data)};
- const db = {doc:ref,runTransaction:async f=>f(tx)};
- const body = {requestId:"11111111-1111-4111-8111-111111111111",deckId:"d",cardId:"c"};
- await study.recordStudyReview(db,"alice",body); await study.recordStudyReview(db,"alice",body);
- assert.equal([...records.keys()].filter(k=>k.includes("studyReviews")).length,1);
- await assert.rejects(study.recordStudyReview(db,"alice",{...body,cardId:"other"}),e=>e.status===409);
- await assert.rejects(study.recordStudyReview(db,"bob",body),e=>e.status===404);
- await assert.rejects(study.recordStudyReview(db,"alice",{...body,sharedId:"revoked"}),e=>e.status===404);
- records.delete("users/alice/decks/d/questions/c");
- await assert.rejects(study.recordStudyReview(db,"alice",body),e=>e.status===404);
+test("review receipts deduplicate retries, reject conflicting reuse, and require live card access", async () => {
+  const records = new Map();
+  const ref = (path) => ({
+    path,
+    collection: (name) => ({ doc: (id) => ref(`${path}/${name}/${id}`) }),
+  });
+  records.set("users/alice/decks/d", {});
+  records.set("users/alice/decks/d/questions/c", {});
+  records.set("users/alice/decks/d/questions/other", {});
+  const tx = {
+    get: async (r) => ({
+      exists: records.has(r.path),
+      data: () => records.get(r.path),
+      ref: r,
+    }),
+    create: (r, data) => records.set(r.path, data),
+  };
+  const db = { doc: ref, runTransaction: async (f) => f(tx) };
+  const body = {
+    requestId: "11111111-1111-4111-8111-111111111111",
+    deckId: "d",
+    cardId: "c",
+  };
+  await study.recordStudyReview(db, "alice", body);
+  await study.recordStudyReview(db, "alice", body);
+  assert.equal(
+    [...records.keys()].filter((k) => k.includes("studyReviews")).length,
+    1,
+  );
+  await assert.rejects(
+    study.recordStudyReview(db, "alice", { ...body, cardId: "other" }),
+    (e) => e.status === 409,
+  );
+  await assert.rejects(
+    study.recordStudyReview(db, "bob", body),
+    (e) => e.status === 404,
+  );
+  await assert.rejects(
+    study.recordStudyReview(db, "alice", { ...body, sharedId: "revoked" }),
+    (e) => e.status === 404,
+  );
+  records.delete("users/alice/decks/d/questions/c");
+  await assert.rejects(
+    study.recordStudyReview(db, "alice", body),
+    (e) => e.status === 404,
+  );
 });
-test("study activity counts inventory and actual dated review receipts",async()=>{
- const db = {collection:path=>({get:async()=>path.endsWith("decks") ? {size:1,docs:[{data:()=>({updatedAt:"2026-10-10T12:00:00Z"}),ref:{collection:()=>({count:()=>({get:async()=>({data:()=>({count:3})})})})}}]} : {docs:[{data:()=>({completedAt:"2026-10-12T12:00:00Z"})},{data:()=>({completedAt:"2026-10-11T12:00:00Z"})},{data:()=>({completedAt:"2027-01-01T12:00:00Z"})}]} })};
- const result = await study.loadStudyActivity(db,"alice","UTC",new Date("2026-10-12T16:00:00Z"));
- assert.equal(result.decks,1); assert.equal(result.savedCards,3); assert.equal(result.reviews,2); assert.equal(result.today,1); assert.equal(result.thisWeek,1); assert.equal(result.thisMonth,2);
+test("study activity counts inventory and actual dated review receipts", async () => {
+  const db = {
+    collection: (path) => ({
+      get: async () =>
+        path.endsWith("decks")
+          ? {
+              size: 1,
+              docs: [
+                {
+                  data: () => ({ updatedAt: "2026-10-10T12:00:00Z" }),
+                  ref: {
+                    collection: () => ({
+                      count: () => ({
+                        get: async () => ({ data: () => ({ count: 3 }) }),
+                      }),
+                    }),
+                  },
+                },
+              ],
+            }
+          : {
+              docs: [
+                { data: () => ({ completedAt: "2026-10-12T12:00:00Z" }) },
+                { data: () => ({ completedAt: "2026-10-11T12:00:00Z" }) },
+                { data: () => ({ completedAt: "2027-01-01T12:00:00Z" }) },
+              ],
+            },
+    }),
+  };
+  const result = await study.loadStudyActivity(
+    db,
+    "alice",
+    "UTC",
+    new Date("2026-10-12T16:00:00Z"),
+  );
+  assert.equal(result.decks, 1);
+  assert.equal(result.savedCards, 3);
+  assert.equal(result.reviews, 2);
+  assert.equal(result.today, 1);
+  assert.equal(result.thisWeek, 1);
+  assert.equal(result.thisMonth, 2);
+});
+test("CSV includes individual and team dimensions and safely escapes spreadsheet formulas", () => {
+  const statistics = stats.buildStatistics(
+    [],
+    new Date("2026-10-12T16:00:00Z"),
+  );
+  const student = {
+    uid: "a",
+    displayName: '=HYPERLINK("bad")',
+    role: "student",
+    statistics,
+    heatmap: [],
+    participation: {
+      status: "never",
+      lastPracticeAt: null,
+      activeDays: 0,
+      sessions: 0,
+    },
+    study: {
+      decks: 2,
+      savedCards: 3,
+      reviews: 4,
+      today: 1,
+      thisWeek: 2,
+      thisMonth: 4,
+      lastReviewAt: null,
+      lastDeckChange: null,
+    },
+    assignments: [
+      {
+        id: "a",
+        title: 'Biology, "Lab"',
+        status: "completed",
+        completedQuestions: 5,
+        questionCount: 5,
+        dueAt: null,
+      },
+    ],
+  };
+  const data = {
+    members: [student],
+    students: [student],
+    team: statistics,
+    heatmap: [],
+    generatedAt: "2026-10-12T16:00:00Z",
+  };
+  const csv = teamHelpers.teamStatisticsCSV(data);
+  assert.ok(csv.startsWith("\uFEFF"));
+  assert.ok(csv.includes('"Entire student team"'));
+  assert.ok(csv.includes('"\'=HYPERLINK(""bad"")"'));
+  assert.ok(csv.includes('"Biology, ""Lab"""'));
+  assert.ok(csv.includes('"monthly"'));
+  assert.ok(csv.includes('"Assignment status"'));
+  const individual = teamHelpers.teamStatisticsCSV(data, "a");
+  assert.ok(!individual.includes('"Entire student team"'));
+  assert.ok(individual.includes('"assignment"'));
 });

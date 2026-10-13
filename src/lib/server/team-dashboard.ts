@@ -121,16 +121,7 @@ export async function loadTeamDashboard(
       sessionId: `${member.uid}:${attempt.sessionId}`,
     })),
   );
-  const team = buildStatistics(
-    histories.flatMap(({ member, history }) =>
-      history.map((attempt) => ({
-        ...attempt,
-        sessionId: `${member.uid}:${attempt.sessionId}`,
-      })),
-    ),
-    now,
-    timeZone,
-  );
+  const team = buildStatistics(allAttempts, now, timeZone);
   // Recheck membership before releasing student data if a student was removed during loading.
   const current = await db.collection(`teams/${teamId}/members`).get();
   if (

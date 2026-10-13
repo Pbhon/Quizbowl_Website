@@ -16,6 +16,7 @@
     "test:e2e": "node node_modules/@playwright/test/cli.js test",
     "test:practice": "node --test tests/practice.test.mjs tests/practice-persistence.test.mjs",
     "test:statistics": "node --test tests/statistics.test.mjs",
+    "test:team": "node --test tests/team-dashboard.test.mjs",
     "test:history": "node --test tests/history.test.mjs",
     "test:accounts": "node --test tests/team-session.test.mjs",
     "test:anki": "node --test tests/anki-export.test.mjs tests/anki-package.test.mjs",

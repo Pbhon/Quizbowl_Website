@@ -336,3 +336,45 @@ test("private decks, shared deck cards and share pointers remain server-only", a
     await assertFails(getDocs(collection(db, "teams/team-a/sharedDecks")));
   }
 });
+
+test("staff statistics and review receipts require server APIs; clients cannot forge progress", async () => {
+  await seedStaff();
+  await seedMember();
+  await env.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, "users/student-one/studyReviews/review"), {
+      completedAt: Timestamp.now(),
+    });
+    await setDoc(doc(db, "teams/team-a/assignments/a/progress/student-one"), {
+      completedQuestions: 5,
+    });
+    await setDoc(doc(db, "users/student-one/attempts/attempt"), {
+      outcome: "correct",
+    });
+  });
+  for (const db of [
+    verifiedDb(),
+    verifiedDb("admin"),
+    verifiedDb("student-two"),
+    env.unauthenticatedContext().firestore(),
+  ]) {
+    for (const path of [
+      "users/student-one/studyReviews/review",
+      "teams/team-a/assignments/a/progress/student-one",
+    ]) {
+      await assertFails(getDoc(doc(db, path)));
+      await assertFails(
+        setDoc(doc(db, path), {
+          completedQuestions: 999,
+          completedAt: serverTimestamp(),
+        }),
+      );
+    }
+  }
+  await assertFails(
+    getDoc(doc(verifiedDb("admin"), "users/student-one/attempts/attempt")),
+  );
+  await assertSucceeds(
+    getDoc(doc(verifiedDb(), "users/student-one/attempts/attempt")),
+  );
+});

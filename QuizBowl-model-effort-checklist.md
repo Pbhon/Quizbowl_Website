@@ -184,7 +184,21 @@ questions keep their stored plain text; new questions retain basic formatting.
 - [x] **[Medium]** Monitor student participation
 - [x] **[Low]** View assignment completion
 - [x] **[Medium]** Track student deck and review activity
-- [ ] **[Low]** Export individual and team statistics to CSV
+- [x] **[Low]** Export individual and team statistics to CSV
+
+All thirteen Task 9 subtasks are complete at `/team`. Verified school teachers
+and administrators can view the full member roster, individual and team student
+statistics, subject/difficulty comparisons, daily/weekly/monthly activity,
+interactive trends, heatmaps, weak areas, participation, assignment completion,
+deck inventory and in-site flashcard reviews, and individual/team CSV exports.
+Staff access and current membership are checked server-side; other schools'
+data and private card contents are excluded. Assignment completion reads saved
+published assignment progress; authoring and automatic updates remain task 10.
+Review tracking starts with this feature and covers in-site answer reveals;
+Anki review synchronization remains task 14. Unit tests, Firebase rules tests,
+desktop/mobile emulator browser tests, lint, typecheck, formatting, and a fresh
+production build pass. See README.md for the assignment progress contract and
+counting rules.
 
 ## 10. Teacher Assignments & Shared Decks
 - [ ] **[Medium]** Create practice assignments
@@ -259,15 +273,3 @@ questions keep their stored plain text; new questions retain basic formatting.
 - [ ] **[Medium]** AI explanations for difficult clues
 - [ ] **[High]** Anki review progress synchronization
 - [ ] **[High]** Optional support for multiple school teams
-
-
-
-
-
-
-
-
-
-
-
-

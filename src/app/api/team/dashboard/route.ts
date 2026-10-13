@@ -7,6 +7,7 @@ import {
   loadTeamDashboard,
   requireTeamStaff,
 } from "@/lib/server/team-dashboard";
+import { teamStatisticsCSV } from "@/lib/team-dashboard";
 export const runtime = "nodejs";
 export async function GET(request: Request) {
   const headers = {
@@ -29,6 +30,19 @@ export async function GET(request: Request) {
     }
     const data = await loadTeamDashboard(account.db, teamId, timeZone);
     await requireTeamStaff(account.db, account.uid, user.emailVerified);
+    const params = new URL(request.url).searchParams;
+    if (params.get("format") === "csv") {
+      const studentUid = params.get("student") || undefined;
+      if (studentUid && !data.students.some((s) => s.uid === studentUid))
+        throw new PracticeError("Student not found in your school.", 404);
+      return new Response(teamStatisticsCSV(data, studentUid), {
+        headers: {
+          ...headers,
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="quizbowl-${studentUid ? "student" : "team"}-statistics.csv"`,
+        },
+      });
+    }
     return Response.json(data, { headers });
   } catch (error) {
     return Response.json(

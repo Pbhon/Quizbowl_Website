@@ -160,3 +160,127 @@ export type StudyActivity = {
   thisWeek: number;
   thisMonth: number;
 };
+
+function csvValue(value: unknown) {
+  let text = value == null ? "" : String(value);
+  if (/^[\s\u0000-\u001f]*[=+@-]/.test(text)) text = `'${text}`;
+  return `"${text.replaceAll('"', '""')}"`;
+}
+export function teamStatisticsCSV(
+  data: TeamDashboardData,
+  studentUid?: string,
+): string {
+  const selected = studentUid
+    ? data.students.filter((s) => s.uid === studentUid)
+    : data.students;
+  const rows: unknown[][] = [
+    [
+      "Student ID",
+      "Student",
+      "Section",
+      "Area",
+      "Category",
+      "Difficulty",
+      "Questions",
+      "Responses",
+      "Correct",
+      "Incorrect",
+      "Skipped",
+      "Accuracy (%)",
+      "Participation",
+      "Last practice",
+      "Active days (30)",
+      "Practice sessions",
+      "Decks",
+      "Saved cards",
+      "Reviews",
+      "Reviews today",
+      "Reviews this week",
+      "Reviews this month",
+      "Last deck change",
+      "Last review",
+      "Assignment completed questions",
+      "Assignment target",
+      "Assignment status",
+      "Assignment deadline",
+      "Time zone",
+      "Generated at",
+    ],
+  ];
+  const exportStats = (
+    uid: string,
+    name: string,
+    statistics: TeamStatistics,
+    student?: TeamDashboardData["students"][number],
+  ) => {
+    const push = (
+      section: string,
+      area: string,
+      perf?: Performance,
+      category = "",
+      difficulty: number | string = "",
+      assignment?: AssignmentCompletion,
+    ) =>
+      rows.push([
+        uid,
+        name,
+        section,
+        area,
+        category,
+        difficulty,
+        perf?.questions,
+        perf?.attempted,
+        perf?.correct,
+        perf?.incorrect,
+        perf?.skipped,
+        perf?.accuracy,
+        student?.participation.status,
+        student?.participation.lastPracticeAt,
+        student?.participation.activeDays,
+        student?.participation.sessions,
+        student?.study.decks,
+        student?.study.savedCards,
+        student?.study.reviews,
+        student?.study.today,
+        student?.study.thisWeek,
+        student?.study.thisMonth,
+        student?.study.lastDeckChange,
+        student?.study.lastReviewAt,
+        assignment?.completedQuestions,
+        assignment?.questionCount,
+        assignment?.status,
+        assignment?.dueAt,
+        statistics.timeZone,
+        data.generatedAt,
+      ]);
+    push("overall", "All practice", statistics.total);
+    for (const section of [
+      "categories",
+      "subcategories",
+      "difficulties",
+    ] as const)
+      for (const row of statistics[section])
+        push(
+          section,
+          row.label,
+          row,
+          row.category,
+          section === "difficulties" ? row.label : "",
+        );
+    for (const period of ["daily", "weekly", "monthly"] as const)
+      for (const row of statistics.activity[period])
+        push(period, row.label, row);
+    for (const cell of student?.heatmap || data.heatmap)
+      push("heatmap", cell.category, cell, cell.category, cell.difficulty);
+    for (const assignment of student?.assignments || [])
+      push("assignment", assignment.title, undefined, "", "", assignment);
+  };
+  if (!studentUid) exportStats("", "Entire student team", data.team);
+  for (const student of selected)
+    exportStats(student.uid, student.displayName, student.statistics, student);
+  return (
+    "\uFEFF" +
+    rows.map((row) => row.map(csvValue).join(",")).join("\r\n") +
+    "\r\n"
+  );
+}

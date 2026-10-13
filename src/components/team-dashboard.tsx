@@ -9,7 +9,7 @@ import { Notice } from "./form-field";
 import { Button } from "./ui/button";
 import type { Breakdown } from "@/lib/statistics";
 import type { TeamDashboardData } from "@/lib/team-dashboard";
-import type { TeamMember, HeatmapCell } from "@/lib/team-dashboard";
+import type { HeatmapCell } from "@/lib/team-dashboard";
 export function TeamDashboard() {
   const { user, access } = useAuth();
   return (
@@ -32,6 +32,36 @@ function Workspace({ user }: { user: User }) {
     : data?.team;
   const [error, setError] = useState("");
   const [reload, setReload] = useState(0);
+  const [exporting, setExporting] = useState(false);
+  async function download() {
+    setExporting(true);
+    try {
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const response = await fetch(
+        `/api/team/dashboard?format=csv&timeZone=${encodeURIComponent(timeZone)}${selected ? `&student=${encodeURIComponent(selected)}` : ""}`,
+        {
+          headers: { Authorization: `Bearer ${await user.getIdToken()}` },
+          cache: "no-store",
+        },
+      );
+      if (!response.ok) throw new Error((await response.json()).error);
+      const url = URL.createObjectURL(await response.blob()),
+        link = document.createElement("a");
+      link.href = url;
+      link.download = `quizbowl-${selected ? "student" : "team"}-statistics.csv`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (failure) {
+      setData(null);
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Export failed. Please retry.",
+      );
+    } finally {
+      setExporting(false);
+    }
+  }
   useEffect(() => {
     const controller = new AbortController();
     void (async () => {
@@ -46,7 +76,16 @@ function Workspace({ user }: { user: User }) {
         );
         const body = await response.json();
         if (!response.ok) throw new Error(body.error);
-        if (!controller.signal.aborted) setData(body);
+        if (!controller.signal.aborted) {
+          setData(body);
+          setSelected((previous) =>
+            body.students.some(
+              (student: { uid: string }) => student.uid === previous,
+            )
+              ? previous
+              : "",
+          );
+        }
       } catch (failure) {
         if (!controller.signal.aborted)
           setError(
@@ -78,6 +117,13 @@ function Workspace({ user }: { user: User }) {
         <Notice>Loading team statistics…</Notice>
       ) : (
         <>
+          <Button onClick={() => void download()} disabled={exporting}>
+            {exporting
+              ? "Exporting…"
+              : selected
+                ? "Export individual statistics to CSV"
+                : "Export team statistics to CSV"}
+          </Button>
           <h2 className="text-xl font-semibold">
             Team members ({members.length})
           </h2>
@@ -85,6 +131,7 @@ function Workspace({ user }: { user: User }) {
           <label className="block">
             Statistics for
             <select
+              aria-label="Statistics for"
               className="form-select mt-2"
               value={selected}
               onChange={(e) => setSelected(e.target.value)}
@@ -279,6 +326,7 @@ function Activity({ statistics }: { statistics: TeamDashboardData["team"] }) {
       <label>
         Time period
         <select
+          aria-label="Time period"
           className="form-select mt-2"
           value={period}
           onChange={(e) => setPeriod(e.target.value as typeof period)}
@@ -311,6 +359,7 @@ function Trend({ rows }: { rows: Breakdown[] }) {
       <label>
         Chart metric
         <select
+          aria-label="Chart metric"
           className="form-select mt-2"
           value={metric}
           onChange={(e) => setMetric(e.target.value as typeof metric)}
@@ -488,6 +537,7 @@ function ParticipationTable({
         <label>
           Participation filter
           <select
+            aria-label="Participation filter"
             className="form-select mt-2"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
@@ -643,8 +693,9 @@ function StudyTable({ students }: { students: TeamDashboardData["students"] }) {
       <h2 className="text-xl font-semibold">Deck and review activity</h2>
       <p className="text-sm text-muted-foreground">
         Decks and saved cards are current inventory. Reviews count answer
-        reveals in this site's flashcards since tracking began; Anki reviews are
-        not synchronized. Private card contents stay out of this dashboard.
+        reveals in this site&apos;s flashcards since tracking began; Anki
+        reviews are not synchronized. Private card contents stay out of this
+        dashboard.
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">

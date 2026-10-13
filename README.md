@@ -515,3 +515,45 @@ python -m venv .tools/anki-venv
 $env:ANKI_TEST_PYTHON = (Resolve-Path .tools/anki-venv/Scripts/python.exe).Path
 pnpm test:anki:imports
 ```
+
+## Teacher/Admin dashboard (task 9)
+
+Verified teachers and administrators can open `/team` to see the configured
+school's full roster, select an individual student or the whole student team,
+compare subject/subcategory/difficulty accuracy, inspect daily/weekly/monthly
+activity and charts, view subject-by-difficulty heatmaps, identify weak areas,
+and filter student participation. Staff accounts appear in the roster but are
+excluded from student aggregates. Question totals deduplicate bonus parts within
+each student's session; accuracy uses correct / (correct + incorrect) responses.
+All dates use the viewing staff member's browser timezone, and weeks start Monday.
+
+`GET /api/team/dashboard` validates the authenticated user, current email
+verification, staff role, and configured school. Client-provided school IDs cannot
+select another school. Student data comes only from current school members, and
+staff access and roster membership are rechecked before returning data. Responses
+and exports are private and uncached. Use `format=csv` for a team export and
+`student=<uid>` for an individual export. CSV includes subject, difficulty,
+heatmap, time-period, participation, deck/review, and assignment rows; text fields
+are quoted and protected against spreadsheet formulas.
+
+The assignment viewer reads published `teams/{teamId}/assignments/{id}` records
+with `audience: "team"` or a `studentUids` recipient list, `questionCount`, and
+optional `dueAt`. Expanded group recipients can use `studentUids`. It reads trusted
+`progress/{uid}.completedQuestions` documents beneath each assignment. Missing
+progress shows not started (or overdue after its deadline), and completed counts
+are clamped to the target. Assignment creation and automatic progress updates
+remain task 10; ordinary practice is not credited without a progress record.
+
+Deck activity reports current owned deck/card inventory and the latest surviving
+deck's update timestamp; it does not expose private card text. In-site answer
+reveals now save authenticated, server-timestamped `users/{uid}/studyReviews/{uuid}`
+receipts through `POST /api/decks/reviews`. Repeated flips for the same card visit
+and retries reuse one receipt. A later visit is another review. Card access and
+shared visibility are checked transactionally. Failed saves show a retry control.
+Review counts start with this feature; Anki review synchronization remains task 14.
+Deck deletions are reflected in inventory, not retained as a change history.
+
+Run `pnpm test:team` for calculation, permission, receipt, and CSV tests. Firebase
+emulator browser coverage is in `tests/e2e/team-dashboard.spec.ts` for desktop and
+mobile, including role revocation, school isolation, flashcard review recording,
+assignment progress, charts, exports, failure recovery, and account switching.
