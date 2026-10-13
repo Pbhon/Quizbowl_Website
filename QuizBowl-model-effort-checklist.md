@@ -183,7 +183,7 @@ questions keep their stored plain text; new questions retain basic formatting.
 - [x] **[Medium]** Identify weak topics and areas for improvement
 - [x] **[Medium]** Monitor student participation
 - [x] **[Low]** View assignment completion
-- [ ] **[Medium]** Track student deck and review activity
+- [x] **[Medium]** Track student deck and review activity
 - [ ] **[Low]** Export individual and team statistics to CSV
 
 ## 10. Teacher Assignments & Shared Decks
@@ -259,6 +259,7 @@ questions keep their stored plain text; new questions retain basic formatting.
 - [ ] **[Medium]** AI explanations for difficult clues
 - [ ] **[High]** Anki review progress synchronization
 - [ ] **[High]** Optional support for multiple school teams
+
 
 
 

@@ -1,4 +1,5 @@
 import "server-only";
+import { loadStudyActivity } from "./study-activity";
 import {
   subjectDifficulty,
   participation,
@@ -102,12 +103,14 @@ export async function loadTeamDashboard(
           member,
           history,
           assignments: completion.filter((row) => row !== null),
+          study: await loadStudyActivity(db, member.uid, timeZone, now),
         };
       }),
   );
-  const students = histories.map(({ member, history, assignments }) => ({
+  const students = histories.map(({ member, history, assignments, study }) => ({
     ...member,
     assignments,
+    study,
     statistics: buildStatistics(history, now, timeZone),
     heatmap: subjectDifficulty(history, now, timeZone),
     participation: participation(history, now, timeZone),

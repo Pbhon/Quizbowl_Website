@@ -20,6 +20,7 @@ export type TeamDashboardData = {
     heatmap: HeatmapCell[];
     participation: Participation;
     assignments: AssignmentCompletion[];
+    study: StudyActivity;
   })[];
   team: TeamStatistics;
   heatmap: HeatmapCell[];
@@ -148,3 +149,14 @@ export function assignmentCompletion(
           : "not started",
   };
 }
+
+export type StudyActivity = {
+  decks: number;
+  savedCards: number;
+  lastDeckChange: string | null;
+  reviews: number;
+  lastReviewAt: string | null;
+  today: number;
+  thisWeek: number;
+  thisMonth: number;
+};

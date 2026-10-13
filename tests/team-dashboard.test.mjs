@@ -39,6 +39,18 @@ const teamHelpers = load("src/lib/team-dashboard.ts", {
   "./statistics": stats,
 });
 const server = load("src/lib/server/team-dashboard.ts", {
+  "./study-activity": {
+    loadStudyActivity: async () => ({
+      decks: 0,
+      savedCards: 0,
+      reviews: 0,
+      lastReviewAt: null,
+      lastDeckChange: null,
+      today: 0,
+      thisWeek: 0,
+      thisMonth: 0,
+    }),
+  },
   "server-only": {},
   "@/lib/team-dashboard": teamHelpers,
   "./site-team": { siteTeam: () => ({ id: "school" }) },
@@ -276,4 +288,27 @@ test("assignment completion enforces publication and audience and handles progre
     ).status,
     "in progress",
   );
+});
+const study = load("src/lib/server/study-activity.ts", {
+ "server-only":{}, "firebase-admin/firestore":{FieldValue:{serverTimestamp:()=>"stamp"}}, "./history":{documentId: v => {if(typeof v !== "string" || !/^[a-zA-Z0-9_-]{1,200}$/.test(v)) throw new PracticeError("Invalid",400); return v;}}, "./deck-sharing":{readableShare:async()=>{throw new PracticeError("Shared unavailable",404);}}, "./practice-persistence":{PracticeError}, "./dashboard":{timestampISO:v=>typeof v === "string" ? v : null}, "@/lib/statistics":stats
+});
+test("review receipts deduplicate retries, reject conflicting reuse, and require live card access", async()=>{
+ const records = new Map();
+ const ref = path=>({path,collection:name=>({doc:id=>ref(`${path}/${name}/${id}`)})});
+ records.set("users/alice/decks/d",{}); records.set("users/alice/decks/d/questions/c",{}); records.set("users/alice/decks/d/questions/other",{});
+ const tx = {get:async r=>({exists:records.has(r.path),data:()=>records.get(r.path),ref:r}),create:(r,data)=>records.set(r.path,data)};
+ const db = {doc:ref,runTransaction:async f=>f(tx)};
+ const body = {requestId:"11111111-1111-4111-8111-111111111111",deckId:"d",cardId:"c"};
+ await study.recordStudyReview(db,"alice",body); await study.recordStudyReview(db,"alice",body);
+ assert.equal([...records.keys()].filter(k=>k.includes("studyReviews")).length,1);
+ await assert.rejects(study.recordStudyReview(db,"alice",{...body,cardId:"other"}),e=>e.status===409);
+ await assert.rejects(study.recordStudyReview(db,"bob",body),e=>e.status===404);
+ await assert.rejects(study.recordStudyReview(db,"alice",{...body,sharedId:"revoked"}),e=>e.status===404);
+ records.delete("users/alice/decks/d/questions/c");
+ await assert.rejects(study.recordStudyReview(db,"alice",body),e=>e.status===404);
+});
+test("study activity counts inventory and actual dated review receipts",async()=>{
+ const db = {collection:path=>({get:async()=>path.endsWith("decks") ? {size:1,docs:[{data:()=>({updatedAt:"2026-10-10T12:00:00Z"}),ref:{collection:()=>({count:()=>({get:async()=>({data:()=>({count:3})})})})}}]} : {docs:[{data:()=>({completedAt:"2026-10-12T12:00:00Z"})},{data:()=>({completedAt:"2026-10-11T12:00:00Z"})},{data:()=>({completedAt:"2027-01-01T12:00:00Z"})}]} })};
+ const result = await study.loadStudyActivity(db,"alice","UTC",new Date("2026-10-12T16:00:00Z"));
+ assert.equal(result.decks,1); assert.equal(result.savedCards,3); assert.equal(result.reviews,2); assert.equal(result.today,1); assert.equal(result.thisWeek,1); assert.equal(result.thisMonth,2);
 });

@@ -621,6 +621,8 @@ function DeckPanel({
             <Flashcards
               key={`${search}:${cards.map((card) => card.id).join(",")}`}
               cards={cards}
+              user={user}
+              deck={deck}
             />
           )}
           {!cards.length && (
@@ -778,7 +780,57 @@ function QuestionFace({
     </div>
   );
 }
-function Flashcards({ cards }: { cards: SavedCard[] }) {
+function Flashcards({
+  cards,
+  user,
+  deck,
+}: {
+  cards: SavedCard[];
+  user: User;
+  deck: StudyDeck;
+}) {
+  const [reviewError, setReviewError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const receipt = useRef<{
+    cardId: string;
+    requestId: string;
+    saved: boolean;
+  } | null>(null);
+  async function saveReview() {
+    if (saving) return;
+    if (!receipt.current || receipt.current.cardId !== card.id)
+      receipt.current = {
+        cardId: card.id,
+        requestId: crypto.randomUUID(),
+        saved: false,
+      };
+    const record = receipt.current;
+    if (record.saved) return;
+    setSaving(true);
+    setReviewError("");
+    try {
+      const response = await fetch("/api/decks/reviews", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${await user.getIdToken()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requestId: record.requestId,
+          cardId: record.cardId,
+          deckId: deck.id,
+          ...(deck.sharedId ? { sharedId: deck.sharedId } : {}),
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+      record.saved = true;
+    } catch (error) {
+      setReviewError(message(error));
+    } finally {
+      setSaving(false);
+    }
+  }
   const [index, setIndex] = useState(0),
     [flipped, setFlipped] = useState(false);
   const card = cards[Math.min(index, cards.length - 1)];
@@ -791,24 +843,51 @@ function Flashcards({ cards }: { cards: SavedCard[] }) {
         Card {index + 1} of {cards.length} · {flipped ? "Answer" : "Question"}
       </p>
       <QuestionFace question={card.question} answer={flipped} />
+      <p className="text-xs text-muted-foreground">
+        Revealing an answer records an in-site flashcard review, not a scored
+        practice attempt.
+      </p>
+      {saving && <Notice>Saving review…</Notice>}
+      {reviewError && (
+        <Notice error>
+          {reviewError}{" "}
+          <Button
+            variant="outline"
+            onClick={() => void saveReview()}
+            disabled={saving}
+          >
+            Retry saving review
+          </Button>
+        </Notice>
+      )}
       <div className="flex flex-wrap gap-2">
         <Button
           variant="outline"
-          disabled={index === 0}
+          disabled={index === 0 || saving}
           onClick={() => {
+            receipt.current = null;
+            setReviewError("");
             setIndex(index - 1);
             setFlipped(false);
           }}
         >
           Previous card
         </Button>
-        <Button onClick={() => setFlipped(!flipped)}>
+        <Button
+          disabled={saving}
+          onClick={() => {
+            if (!flipped) void saveReview();
+            setFlipped(!flipped);
+          }}
+        >
           {flipped ? "Show question" : "Flip to answer"}
         </Button>
         <Button
           variant="outline"
-          disabled={index + 1 >= cards.length}
+          disabled={index + 1 >= cards.length || saving}
           onClick={() => {
+            receipt.current = null;
+            setReviewError("");
             setIndex(index + 1);
             setFlipped(false);
           }}

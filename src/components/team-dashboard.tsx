@@ -170,6 +170,11 @@ function Workspace({ user }: { user: User }) {
               (s) => !selected || s.uid === selected,
             )}
           />
+          <StudyTable
+            students={(data?.students || []).filter(
+              (s) => !selected || s.uid === selected,
+            )}
+          />
           <ParticipationTable students={data?.students || []} />
           <ul className="divide-y">
             {members.map((member) => (
@@ -628,6 +633,73 @@ function AssignmentTable({
           </table>
         </div>
       )}
+    </section>
+  );
+}
+
+function StudyTable({ students }: { students: TeamDashboardData["students"] }) {
+  return (
+    <section className="space-y-3">
+      <h2 className="text-xl font-semibold">Deck and review activity</h2>
+      <p className="text-sm text-muted-foreground">
+        Decks and saved cards are current inventory. Reviews count answer
+        reveals in this site's flashcards since tracking began; Anki reviews are
+        not synchronized. Private card contents stay out of this dashboard.
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <caption className="sr-only">Deck and review activity</caption>
+          <thead>
+            <tr>
+              {[
+                "Student",
+                "Decks",
+                "Saved cards",
+                "Reviews",
+                "Today",
+                "This week",
+                "This month",
+                "Last deck change",
+                "Last review",
+              ].map((label) => (
+                <th scope="col" className="p-2" key={label}>
+                  {label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {students.map((s) => (
+              <tr className="border-t" key={s.uid}>
+                <th className="p-2" scope="row">
+                  {s.displayName}
+                </th>
+                {[
+                  s.study.decks,
+                  s.study.savedCards,
+                  s.study.reviews,
+                  s.study.today,
+                  s.study.thisWeek,
+                  s.study.thisMonth,
+                  ...[s.study.lastDeckChange, s.study.lastReviewAt].map(
+                    (date) =>
+                      date
+                        ? new Intl.DateTimeFormat(undefined, {
+                            dateStyle: "medium",
+                            timeZone: s.statistics.timeZone,
+                          }).format(new Date(date))
+                        : "—",
+                  ),
+                ].map((value, i) => (
+                  <td className="p-2" key={i}>
+                    {value}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
