@@ -126,6 +126,7 @@ function Workspace({ user }: { user: User }) {
 function AssignmentForm({
   user,
   assignment,
+  data,
   done,
 }: {
   user: User;
@@ -136,6 +137,10 @@ function AssignmentForm({
   const [title, setTitle] = useState(assignment?.title || "");
   const [description, setDescription] = useState(assignment?.description || "");
   const [published, setPublished] = useState(assignment?.published || false);
+  const [audience, setAudience] = useState(assignment?.audience || "team");
+  const [studentUids, setStudentUids] = useState<string[]>(
+    assignment?.studentUids || [],
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -157,6 +162,8 @@ function AssignmentForm({
                 title,
                 description,
                 published,
+                audience,
+                studentUids,
               });
               setNotice("Assignment saved.");
               if (!assignment) {
@@ -196,6 +203,39 @@ function AssignmentForm({
                 onChange={(event) => setDescription(event.target.value)}
               />
             </FormField>
+            <label className="flex items-center gap-2">
+              <span>Assign to</span>
+              <select
+                aria-label="Assign to"
+                className="form-select"
+                value={audience}
+                onChange={(event) => {
+                  setAudience(event.target.value as "team" | "students");
+                  setStudentUids([]);
+                }}
+              >
+                <option value="team">Entire team</option>
+                <option value="students">Individual student</option>
+              </select>
+            </label>
+            {audience === "students" && (
+              <FormField id="assignment-student" label="Student">
+                <select
+                  id="assignment-student"
+                  required
+                  className="form-select"
+                  value={studentUids[0] || ""}
+                  onChange={(event) => setStudentUids([event.target.value])}
+                >
+                  <option value="">Choose student</option>
+                  {data.students.map((student) => (
+                    <option key={student.uid} value={student.uid}>
+                      {student.displayName}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+            )}
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"

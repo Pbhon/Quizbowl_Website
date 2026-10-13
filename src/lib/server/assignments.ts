@@ -44,12 +44,26 @@ export async function saveAssignment(
     throw new PracticeError("Unknown assignment action.", 400);
   if (typeof body.published !== "boolean")
     throw new PracticeError("Choose draft or published.", 400);
+  const audience = body.audience ?? "team";
+  if (!["team", "students"].includes(String(audience)))
+    throw new PracticeError("Choose an assignment audience.", 400);
+  if (
+    !Array.isArray(body.studentUids ?? []) ||
+    (body.studentUids as unknown[] | undefined)?.length! > 200
+  )
+    throw new PracticeError("Choose up to 200 students.", 400);
+  const studentUids =
+    audience === "team"
+      ? []
+      : [...new Set(((body.studentUids as unknown[]) || []).map(documentId))];
+  if (audience === "students" && studentUids.length !== 1)
+    throw new PracticeError("Choose one student.", 400);
   const data = {
     title: deckText(body.title, 120, true),
     description: deckText(body.description ?? "", 2000),
     published: body.published,
-    audience: "team",
-    studentUids: [],
+    audience,
+    studentUids,
     questionCount: 10,
     type: "tossup",
     dueAt: null,
@@ -68,6 +82,21 @@ export async function saveAssignment(
     )
       throw new PracticeError("Staff access required.", 403);
     const existing = await tx.get(ref);
+    for (const studentUid of studentUids) {
+      const member = await tx.get(
+        db.doc(`teams/${teamId}/members/${studentUid}`),
+      );
+      const studentStaff = (await tx.get(db.doc(`staff/${studentUid}`))).data();
+      if (
+        !member.exists ||
+        (studentStaff?.teamId === teamId &&
+          ["teacher", "admin"].includes(studentStaff.role))
+      )
+        throw new PracticeError(
+          "Choose current students from your school.",
+          400,
+        );
+    }
     if (body.action === "update" && !existing.exists)
       throw new PracticeError("Assignment not found.", 404);
     if (body.action === "create")

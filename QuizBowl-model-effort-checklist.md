@@ -202,7 +202,7 @@ counting rules.
 
 ## 10. Teacher Assignments & Shared Decks
 - [x] **[Medium]** Create practice assignments
-- [ ] **[Medium]** Assign work to individual students
+- [x] **[Medium]** Assign work to individual students
 - [ ] **[Medium]** Assign work to student groups or the entire team
 - [ ] **[Low]** Set question counts and difficulty ranges
 - [ ] **[Low]** Set category, subcategory, and topic requirements
