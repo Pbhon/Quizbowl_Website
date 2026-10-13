@@ -56,8 +56,8 @@ export async function saveAssignment(
     audience === "team"
       ? []
       : [...new Set(((body.studentUids as unknown[]) || []).map(documentId))];
-  if (audience === "students" && studentUids.length !== 1)
-    throw new PracticeError("Choose one student.", 400);
+  if (audience === "students" && !studentUids.length)
+    throw new PracticeError("Choose at least one student.", 400);
   const data = {
     title: deckText(body.title, 120, true),
     description: deckText(body.description ?? "", 2000),

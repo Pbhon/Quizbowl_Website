@@ -215,26 +215,34 @@ function AssignmentForm({
                 }}
               >
                 <option value="team">Entire team</option>
-                <option value="students">Individual student</option>
+                <option value="students">Selected students / group</option>
               </select>
             </label>
             {audience === "students" && (
-              <FormField id="assignment-student" label="Student">
-                <select
-                  id="assignment-student"
-                  required
-                  className="form-select"
-                  value={studentUids[0] || ""}
-                  onChange={(event) => setStudentUids([event.target.value])}
-                >
-                  <option value="">Choose student</option>
-                  {data.students.map((student) => (
-                    <option key={student.uid} value={student.uid}>
-                      {student.displayName}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
+              <fieldset className="space-y-2">
+                <legend>Students / group</legend>
+                <p className="text-sm text-muted-foreground">
+                  Select one student or a group of current students. This
+                  selection is saved with the assignment.
+                </p>
+                {data.students.map((student) => (
+                  <label key={student.uid} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={studentUids.includes(student.uid)}
+                      onChange={(event) =>
+                        setStudentUids(
+                          event.target.checked
+                            ? [...studentUids, student.uid]
+                            : studentUids.filter((uid) => uid !== student.uid),
+                        )
+                      }
+                    />
+                    {student.displayName}
+                  </label>
+                ))}
+                {!data.students.length && <Notice>No current students.</Notice>}
+              </fieldset>
             )}
             <label className="flex items-center gap-2">
               <input

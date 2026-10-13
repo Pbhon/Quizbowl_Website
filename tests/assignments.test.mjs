@@ -78,7 +78,7 @@ function database(staff = { role: "teacher", teamId: "school" }) {
     runTransaction: async (work) =>
       work({
         get: async (ref) => ({
-          exists: ref.path === "teams/school/members/student",
+          exists: ["teams/school/members/student", "teams/school/members/student2"].includes(ref.path),
           data: () => (ref.path === "staff/teacher" ? staff : undefined),
         }),
         create: (ref, data) => writes.push({ ref, data }),
@@ -160,4 +160,11 @@ test("validates assignment text, publication, actions and update existence", asy
     }),
     (e) => e.status === 404,
   );
+});
+test("group targeting deduplicates students and team audience clears explicit targets", async () => {
+  const { db, writes } = database();
+  await server.saveAssignment(db, "teacher", true, { ...base, audience: "students", studentUids: ["student", "student2", "student"] });
+  assert.equal(writes[0].data.studentUids.length, 2);
+  await server.saveAssignment(db, "teacher", true, { ...base, audience: "team", studentUids: ["student"] });
+  assert.equal(writes[1].data.studentUids.length, 0);
 });
