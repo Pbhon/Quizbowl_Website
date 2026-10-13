@@ -92,7 +92,10 @@ export async function saveAssignment(
     difficultyMin,
     difficultyMax,
     type,
-    dueAt: null,
+    dueAt:
+      body.dueAt == null || body.dueAt === ""
+        ? null
+        : deckText(body.dueAt, 40, true),
     updatedAt: FieldValue.serverTimestamp(),
   };
   if (
@@ -106,6 +109,13 @@ export async function saveAssignment(
       "Choose a valid category and matching subcategory.",
       400,
     );
+  if (
+    data.dueAt !== null &&
+    (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/.test(data.dueAt) ||
+      !Number.isFinite(Date.parse(data.dueAt)))
+  )
+    throw new PracticeError("Enter a valid deadline.", 400);
+  if (data.dueAt) data.dueAt = new Date(data.dueAt).toISOString();
   const ref =
     body.action === "create"
       ? db.collection(`teams/${teamId}/assignments`).doc()

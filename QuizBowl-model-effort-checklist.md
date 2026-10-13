@@ -206,7 +206,7 @@ counting rules.
 - [x] **[Medium]** Assign work to student groups or the entire team
 - [x] **[Low]** Set question counts and difficulty ranges
 - [x] **[Low]** Set category, subcategory, and topic requirements
-- [ ] **[Low]** Set assignment deadlines
+- [x] **[Low]** Set assignment deadlines
 - [ ] **[High]** Automatically track assignment progress
 - [ ] **[Low]** View student completion and performance
 - [ ] **[Medium]** Create teacher-curated study decks

@@ -151,6 +151,14 @@ function AssignmentForm({
   const [category, setCategory] = useState(assignment?.category || "");
   const [subcategory, setSubcategory] = useState(assignment?.subcategory || "");
   const [topic, setTopic] = useState(assignment?.topic || "");
+  const [deadline, setDeadline] = useState(() => {
+    if (!assignment?.dueAt) return "";
+    const date = new Date(assignment.dueAt);
+    if (!Number.isFinite(date.getTime())) return "";
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16);
+  });
   const [audience, setAudience] = useState(assignment?.audience || "team");
   const [studentUids, setStudentUids] = useState<string[]>(
     assignment?.studentUids || [],
@@ -176,6 +184,7 @@ function AssignmentForm({
                 title,
                 description,
                 published,
+                dueAt: deadline ? new Date(deadline).toISOString() : null,
                 category,
                 subcategory,
                 topic,
@@ -206,6 +215,18 @@ function AssignmentForm({
             {assignment ? "Edit assignment" : "Create assignment"}
           </h2>
           <fieldset disabled={busy} className="space-y-4">
+            <FormField
+              id="assignment-deadline"
+              label="Deadline"
+              hint="Optional. Uses your local time zone."
+            >
+              <Input
+                id="assignment-deadline"
+                type="datetime-local"
+                value={deadline}
+                onChange={(event) => setDeadline(event.target.value)}
+              />
+            </FormField>
             <FormField id="assignment-category" label="Category">
               <select
                 id="assignment-category"

@@ -230,3 +230,23 @@ test("subject and topic requirements validate matching taxonomy", async () => {
   });
   assert.equal(writes[0].data.topic, "photosynthesis");
 });
+test("deadlines normalize UTC instants and can be cleared", async () => {
+  for (const dueAt of [
+    "garbage",
+    "2026-10-12T10:30",
+    "2026-13-12T10:30:00Z",
+    123,
+  ])
+    await assert.rejects(
+      server.saveAssignment(database().db, "teacher", true, { ...base, dueAt }),
+      (e) => e.status === 400,
+    );
+  const { db, writes } = database();
+  await server.saveAssignment(db, "teacher", true, {
+    ...base,
+    dueAt: "2026-10-20T23:30:00Z",
+  });
+  assert.equal(writes[0].data.dueAt, "2026-10-20T23:30:00.000Z");
+  await server.saveAssignment(db, "teacher", true, { ...base, dueAt: null });
+  assert.equal(writes[1].data.dueAt, null);
+});
