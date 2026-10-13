@@ -1,4 +1,5 @@
 import "server-only";
+import { subjectDifficulty } from "@/lib/team-dashboard";
 import type { Firestore } from "firebase-admin/firestore";
 import { siteTeam } from "./site-team";
 import { PracticeError } from "./practice-persistence";
@@ -71,7 +72,14 @@ export async function loadTeamDashboard(
   const students = histories.map(({ member, history }) => ({
     ...member,
     statistics: buildStatistics(history, now, timeZone),
+    heatmap: subjectDifficulty(history, now, timeZone),
   }));
+  const allAttempts = histories.flatMap(({ member, history }) =>
+    history.map((attempt) => ({
+      ...attempt,
+      sessionId: `${member.uid}:${attempt.sessionId}`,
+    })),
+  );
   const team = buildStatistics(
     histories.flatMap(({ member, history }) =>
       history.map((attempt) => ({
@@ -91,5 +99,11 @@ export async function loadTeamDashboard(
       "The roster changed. Refresh team statistics.",
       409,
     );
-  return { members, students, team, generatedAt: now.toISOString() };
+  return {
+    members,
+    students,
+    team,
+    heatmap: subjectDifficulty(allAttempts, now, timeZone),
+    generatedAt: now.toISOString(),
+  };
 }

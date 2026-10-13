@@ -8,11 +8,7 @@ import { Notice } from "./form-field";
 import { Button } from "./ui/button";
 import type { Breakdown } from "@/lib/statistics";
 import type { TeamDashboardData } from "@/lib/team-dashboard";
-export type TeamMember = {
-  uid: string;
-  displayName: string;
-  role: "student" | "teacher" | "admin";
-};
+import type { TeamMember, HeatmapCell } from "@/lib/team-dashboard";
 export function TeamDashboard() {
   const { user, access } = useAuth();
   return (
@@ -144,6 +140,13 @@ function Workspace({ user }: { user: User }) {
                 ))}
               </div>
               <Activity statistics={statistics} />
+              <Heatmap
+                cells={
+                  (selected
+                    ? data?.students.find((s) => s.uid === selected)?.heatmap
+                    : data?.heatmap) || []
+                }
+              />
               <div className="grid gap-6 lg:grid-cols-2">
                 <PerformanceTable
                   title="Accuracy by subject"
@@ -332,5 +335,72 @@ function Trend({ rows }: { rows: Breakdown[] }) {
         · {active.incorrect} incorrect · {percent(active.accuracy)} accuracy
       </p>
     </div>
+  );
+}
+
+function Heatmap({ cells }: { cells: HeatmapCell[] }) {
+  const categories = [...new Set(cells.map((cell) => cell.category))];
+  return (
+    <section className="min-w-0 rounded-xl border bg-card p-4">
+      <h3 className="mb-3 font-semibold">Subject by difficulty heatmap</h3>
+      <p className="mb-3 text-sm">
+        Darker cells mean higher accuracy. Each cell shows accuracy and answered
+        response count; — means no scored responses.
+      </p>
+      {!categories.length ? (
+        <p>No completed practice yet.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-center text-sm">
+            <caption className="sr-only">
+              Subject accuracy across difficulties 0 to 10
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col" className="p-2 text-left">
+                  Subject
+                </th>
+                {Array.from({ length: 11 }, (_, i) => (
+                  <th scope="col" className="p-2" key={i}>
+                    {i}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {categories.map((category) => (
+                <tr key={category}>
+                  <th scope="row" className="p-2 text-left">
+                    {category}
+                  </th>
+                  {Array.from({ length: 11 }, (_, i) => {
+                    const cell = cells.find(
+                      (c) => c.category === category && c.difficulty === i,
+                    );
+                    return (
+                      <td
+                        key={i}
+                        className="min-w-20 border p-2"
+                        style={{
+                          backgroundColor:
+                            cell?.accuracy == null
+                              ? undefined
+                              : `rgba(22,163,74,${0.08 + cell.accuracy * 0.004})`,
+                        }}
+                      >
+                        {percent(cell?.accuracy ?? null)}
+                        <span className="block text-xs">
+                          n={cell ? cell.correct + cell.incorrect : 0}
+                        </span>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
