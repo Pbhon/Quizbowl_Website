@@ -6,6 +6,7 @@ import { PracticeError } from "./practice-persistence";
 import { documentId } from "./history";
 import { timestampISO } from "./dashboard";
 import type { PracticeAssignment } from "@/lib/assignments";
+import { subjects } from "@/lib/practice";
 
 export async function assignmentWorkspace(
   db: Firestore,
@@ -79,6 +80,9 @@ export async function saveAssignment(
   if (!["tossup", "bonus"].includes(String(type)))
     throw new PracticeError("Choose tossup or bonus questions.", 400);
   const data = {
+    category: deckText(body.category ?? "", 80),
+    subcategory: deckText(body.subcategory ?? "", 80),
+    topic: deckText(body.topic ?? "", 200),
     title: deckText(body.title, 120, true),
     description: deckText(body.description ?? "", 2000),
     published: body.published,
@@ -91,6 +95,17 @@ export async function saveAssignment(
     dueAt: null,
     updatedAt: FieldValue.serverTimestamp(),
   };
+  if (
+    (data.category && !Object.hasOwn(subjects, data.category)) ||
+    (data.subcategory &&
+      !(
+        data.category ? subjects[data.category] : Object.values(subjects).flat()
+      ).includes(data.subcategory))
+  )
+    throw new PracticeError(
+      "Choose a valid category and matching subcategory.",
+      400,
+    );
   const ref =
     body.action === "create"
       ? db.collection(`teams/${teamId}/assignments`).doc()

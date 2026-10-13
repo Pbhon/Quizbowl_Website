@@ -36,6 +36,7 @@ const roster = [
   { uid: "teacher", role: "teacher" },
 ];
 const imports = {
+  "@/lib/practice": load("src/lib/practice.ts", {}),
   "server-only": {},
   "firebase-admin/firestore": {
     FieldValue: { serverTimestamp: () => "stamp" },
@@ -206,4 +207,26 @@ test("question counts and difficulty ranges enforce integer boundaries", async (
   });
   assert.equal(writes[0].data.questionCount, 500);
   assert.equal(writes[0].data.type, "bonus");
+});
+test("subject and topic requirements validate matching taxonomy", async () => {
+  for (const changed of [
+    { category: "fake" },
+    { category: "History", subcategory: "Biology" },
+    { topic: "a".repeat(201) },
+  ])
+    await assert.rejects(
+      server.saveAssignment(database().db, "teacher", true, {
+        ...base,
+        ...changed,
+      }),
+      (e) => e.status === 400,
+    );
+  const { db, writes } = database();
+  await server.saveAssignment(db, "teacher", true, {
+    ...base,
+    category: "Science",
+    subcategory: "Biology",
+    topic: " photosynthesis ",
+  });
+  assert.equal(writes[0].data.topic, "photosynthesis");
 });

@@ -8,6 +8,7 @@ import { FormField, Notice } from "./form-field";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
+import { subjects } from "@/lib/practice";
 import type {
   AssignmentWorkspace,
   PracticeAssignment,
@@ -147,6 +148,9 @@ function AssignmentForm({
     assignment?.difficultyMax ?? 10,
   );
   const [type, setType] = useState(assignment?.type ?? "tossup");
+  const [category, setCategory] = useState(assignment?.category || "");
+  const [subcategory, setSubcategory] = useState(assignment?.subcategory || "");
+  const [topic, setTopic] = useState(assignment?.topic || "");
   const [audience, setAudience] = useState(assignment?.audience || "team");
   const [studentUids, setStudentUids] = useState<string[]>(
     assignment?.studentUids || [],
@@ -172,6 +176,9 @@ function AssignmentForm({
                 title,
                 description,
                 published,
+                category,
+                subcategory,
+                topic,
                 questionCount,
                 difficultyMin,
                 difficultyMax,
@@ -199,6 +206,50 @@ function AssignmentForm({
             {assignment ? "Edit assignment" : "Create assignment"}
           </h2>
           <fieldset disabled={busy} className="space-y-4">
+            <FormField id="assignment-category" label="Category">
+              <select
+                id="assignment-category"
+                className="form-select"
+                value={category}
+                onChange={(event) => {
+                  setCategory(event.target.value);
+                  setSubcategory("");
+                }}
+              >
+                <option value="">All categories</option>
+                {Object.keys(subjects).map((subject) => (
+                  <option key={subject}>{subject}</option>
+                ))}
+              </select>
+            </FormField>
+            <FormField id="assignment-subcategory" label="Subcategory">
+              <select
+                id="assignment-subcategory"
+                className="form-select"
+                value={subcategory}
+                onChange={(event) => setSubcategory(event.target.value)}
+              >
+                <option value="">All subcategories</option>
+                {(category
+                  ? subjects[category] || []
+                  : Object.values(subjects).flat()
+                ).map((subject) => (
+                  <option key={subject}>{subject}</option>
+                ))}
+              </select>
+            </FormField>
+            <FormField
+              id="assignment-topic"
+              label="Topic requirement"
+              hint="Optional topic or search phrase, such as photosynthesis."
+            >
+              <Input
+                id="assignment-topic"
+                maxLength={200}
+                value={topic}
+                onChange={(event) => setTopic(event.target.value)}
+              />
+            </FormField>
             <div className="grid gap-4 sm:grid-cols-3">
               <FormField id="assignment-count" label="Question count">
                 <Input

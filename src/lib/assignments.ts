@@ -8,6 +8,9 @@ export type PracticeAssignment = {
   questionCount: number;
   difficultyMin: number;
   difficultyMax: number;
+  category: string;
+  subcategory: string;
+  topic: string;
   type: "tossup" | "bonus";
   dueAt: string | null;
 };
