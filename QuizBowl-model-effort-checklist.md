@@ -177,7 +177,7 @@ questions keep their stored plain text; new questions retain basic formatting.
 - [x] **[Medium]** Track total questions attempted per student
 - [x] **[Medium]** Track correct and incorrect attempts
 - [x] **[Medium]** Compare accuracy across subjects and difficulties
-- [ ] **[Medium]** Show daily, weekly, and monthly practice activity
+- [x] **[Medium]** Show daily, weekly, and monthly practice activity
 - [ ] **[Low]** Visualize performance trends
 - [ ] **[Low]** Create subject-by-difficulty heatmaps
 - [ ] **[Medium]** Identify weak topics and areas for improvement
@@ -259,6 +259,7 @@ questions keep their stored plain text; new questions retain basic formatting.
 - [ ] **[Medium]** AI explanations for difficult clues
 - [ ] **[High]** Anki review progress synchronization
 - [ ] **[High]** Optional support for multiple school teams
+
 
 
 

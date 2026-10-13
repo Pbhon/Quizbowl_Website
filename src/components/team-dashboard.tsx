@@ -129,6 +129,21 @@ function Workspace({ user }: { user: User }) {
                 Accuracy excludes skipped responses and pending clarifications.
                 Bonus parts count separately; questions count once per session.
               </p>
+              <div className="grid gap-4 sm:grid-cols-3">
+                {(["daily", "weekly", "monthly"] as const).map((period, i) => (
+                  <div className="rounded-xl border p-4" key={period}>
+                    <h3>{["Today", "This week", "This month"][i]}</h3>
+                    <p>
+                      {statistics.current[period].questions} questions ·{" "}
+                      {statistics.current[period].attempted} responses
+                    </p>
+                    <p>
+                      {percent(statistics.current[period].accuracy)} accuracy
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <Activity statistics={statistics} />
               <div className="grid gap-6 lg:grid-cols-2">
                 <PerformanceTable
                   title="Accuracy by subject"
@@ -232,6 +247,35 @@ function PerformanceTable({
           </table>
         </div>
       )}
+    </section>
+  );
+}
+
+function Activity({ statistics }: { statistics: TeamDashboardData["team"] }) {
+  const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
+  return (
+    <section className="space-y-4">
+      <h3 className="font-semibold">Practice activity</h3>
+      <p className="text-sm text-muted-foreground">
+        Dates use {statistics.timeZone}. Weeks start Monday. Showing 30 days, 12
+        weeks, or 12 months.
+      </p>
+      <label>
+        Time period
+        <select
+          className="form-select mt-2"
+          value={period}
+          onChange={(e) => setPeriod(e.target.value as typeof period)}
+        >
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+        </select>
+      </label>
+      <PerformanceTable
+        title={`${period} practice`}
+        rows={statistics.activity[period]}
+      />
     </section>
   );
 }
