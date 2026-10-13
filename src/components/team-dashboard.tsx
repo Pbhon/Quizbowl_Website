@@ -101,6 +101,15 @@ function Workspace({ user }: { user: User }) {
           </label>
           {statistics && (
             <section className="space-y-4" aria-label="Student statistics">
+              <div
+                className="flex flex-wrap gap-5"
+                aria-label="Response totals"
+              >
+                <span>Correct: {statistics.total.correct}</span>
+                <span>Incorrect: {statistics.total.incorrect}</span>
+                <span>Skipped: {statistics.total.skipped}</span>
+                <span>Responses: {statistics.total.attempted}</span>
+              </div>
               <p className="text-2xl font-semibold">
                 Questions attempted: {statistics.totalQuestions}
               </p>
