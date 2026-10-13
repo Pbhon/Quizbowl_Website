@@ -6,6 +6,7 @@ import { AccountGuard } from "./account-guard";
 import { PageHeading } from "./page-heading";
 import { Notice } from "./form-field";
 import { Button } from "./ui/button";
+import type { TeamDashboardData } from "@/lib/team-dashboard";
 export type TeamMember = {
   uid: string;
   displayName: string;
@@ -25,21 +26,29 @@ export function TeamDashboard() {
   );
 }
 function Workspace({ user }: { user: User }) {
-  const [members, setMembers] = useState<TeamMember[] | null>(null);
+  const [data, setData] = useState<TeamDashboardData | null>(null);
+  const [selected, setSelected] = useState("");
+  const members = data?.members;
+  const statistics = selected
+    ? data?.students.find((s) => s.uid === selected)?.statistics
+    : data?.team;
   const [error, setError] = useState("");
   const [reload, setReload] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
     void (async () => {
       try {
-        const response = await fetch("/api/team/dashboard", {
-          headers: { Authorization: `Bearer ${await user.getIdToken()}` },
-          cache: "no-store",
-          signal: controller.signal,
-        });
+        const response = await fetch(
+          `/api/team/dashboard?timeZone=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)}`,
+          {
+            headers: { Authorization: `Bearer ${await user.getIdToken()}` },
+            cache: "no-store",
+            signal: controller.signal,
+          },
+        );
         const body = await response.json();
         if (!response.ok) throw new Error(body.error);
-        if (!controller.signal.aborted) setMembers(body.members);
+        if (!controller.signal.aborted) setData(body);
       } catch (failure) {
         if (!controller.signal.aborted)
           setError(
@@ -58,7 +67,7 @@ function Workspace({ user }: { user: User }) {
       <Button
         variant="outline"
         onClick={() => {
-          setMembers(null);
+          setData(null);
           setError("");
           setReload((n) => n + 1);
         }}
@@ -75,6 +84,40 @@ function Workspace({ user }: { user: User }) {
             Team members ({members.length})
           </h2>
           {members.length === 0 && <Notice>No team members yet.</Notice>}
+          <label className="block">
+            Statistics for
+            <select
+              className="form-select mt-2"
+              value={selected}
+              onChange={(e) => setSelected(e.target.value)}
+            >
+              <option value="">Entire student team</option>
+              {data?.students.map((student) => (
+                <option key={student.uid} value={student.uid}>
+                  {student.displayName}
+                </option>
+              ))}
+            </select>
+          </label>
+          {statistics && (
+            <section className="space-y-4" aria-label="Student statistics">
+              <h2 className="text-xl font-semibold">
+                {selected
+                  ? members.find((m) => m.uid === selected)?.displayName
+                  : "Entire student team"}
+              </h2>
+              <p>
+                Overall accuracy:{" "}
+                {statistics.total.accuracy === null
+                  ? "—"
+                  : `${statistics.total.accuracy.toFixed(1)}%`}
+              </p>
+              <p>
+                Accuracy excludes skipped responses and pending clarifications.
+                Bonus parts count separately; questions count once per session.
+              </p>
+            </section>
+          )}
           <ul className="divide-y">
             {members.map((member) => (
               <li
