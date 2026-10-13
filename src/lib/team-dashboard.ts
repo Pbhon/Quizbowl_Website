@@ -19,6 +19,7 @@ export type TeamDashboardData = {
     statistics: TeamStatistics;
     heatmap: HeatmapCell[];
     participation: Participation;
+    assignments: AssignmentCompletion[];
   })[];
   team: TeamStatistics;
   heatmap: HeatmapCell[];
@@ -87,5 +88,63 @@ export function participation(
       : new Date(lastPracticeAt).getTime() >= now.getTime() - 7 * 86400000
         ? "active"
         : "inactive",
+  };
+}
+
+export type AssignmentCompletion = {
+  id: string;
+  title: string;
+  dueAt: string | null;
+  completedQuestions: number;
+  questionCount: number;
+  status: "completed" | "in progress" | "not started" | "overdue";
+};
+export function assignmentCompletion(
+  id: string,
+  assignment: Record<string, unknown>,
+  progress: Record<string, unknown> | undefined,
+  uid: string,
+  now = new Date(),
+): AssignmentCompletion | null {
+  if (
+    assignment.published !== true ||
+    assignment.status === "cancelled" ||
+    !(
+      assignment.audience === "team" ||
+      (Array.isArray(assignment.studentUids) &&
+        assignment.studentUids.includes(uid))
+    )
+  )
+    return null;
+  const questionCount =
+    typeof assignment.questionCount === "number" &&
+    Number.isInteger(assignment.questionCount) &&
+    assignment.questionCount > 0
+      ? assignment.questionCount
+      : 0;
+  const completedQuestions =
+    typeof progress?.completedQuestions === "number" &&
+    Number.isInteger(progress.completedQuestions)
+      ? Math.max(0, Math.min(questionCount, progress.completedQuestions))
+      : 0;
+  const dueAt =
+    typeof assignment.dueAt === "string" &&
+    Number.isFinite(new Date(assignment.dueAt).getTime())
+      ? assignment.dueAt
+      : null;
+  const completed = questionCount > 0 && completedQuestions >= questionCount;
+  return {
+    id,
+    title: String(assignment.title || "Untitled assignment"),
+    dueAt,
+    completedQuestions,
+    questionCount,
+    status: completed
+      ? "completed"
+      : dueAt && new Date(dueAt) < now
+        ? "overdue"
+        : completedQuestions > 0
+          ? "in progress"
+          : "not started",
   };
 }

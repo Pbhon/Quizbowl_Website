@@ -119,6 +119,7 @@ test("team statistics isolate current students and namespace shared session IDs"
     collection: (path) => ({
       get: async () => {
         seen.push(path);
+        if (path === "teams/school/assignments") return { docs: [] };
         if (path === "teams/school/members")
           return {
             docs: docs([
@@ -177,10 +178,102 @@ test("heatmap separates categories and difficulties and excludes pending and fut
   assert.equal(cells[1].accuracy, null);
 });
 test("participation includes skips but excludes prompts and future records", () => {
- const now = new Date("2026-10-12T16:00:00Z");
- const a = {sessionId:"s",questionIndex:0,part:0,outcome:"skipped",completedAt:"2026-10-12T12:00:00Z",question:{category:"Science",difficulty:4}};
- assert.equal(teamHelpers.participation([],now).status,"never");
- const result = teamHelpers.participation([a,{...a,part:1},{...a,sessionId:"prompt",outcome:"prompt"},{...a,sessionId:"future",completedAt:"2027-01-01T00:00:00Z"}],now);
- assert.equal(result.status,"active"); assert.equal(result.sessions,1); assert.equal(result.activeDays,1);
- assert.equal(teamHelpers.participation([{...a,completedAt:"2026-09-01T12:00:00Z"}],now).status,"inactive");
+  const now = new Date("2026-10-12T16:00:00Z");
+  const a = {
+    sessionId: "s",
+    questionIndex: 0,
+    part: 0,
+    outcome: "skipped",
+    completedAt: "2026-10-12T12:00:00Z",
+    question: { category: "Science", difficulty: 4 },
+  };
+  assert.equal(teamHelpers.participation([], now).status, "never");
+  const result = teamHelpers.participation(
+    [
+      a,
+      { ...a, part: 1 },
+      { ...a, sessionId: "prompt", outcome: "prompt" },
+      { ...a, sessionId: "future", completedAt: "2027-01-01T00:00:00Z" },
+    ],
+    now,
+  );
+  assert.equal(result.status, "active");
+  assert.equal(result.sessions, 1);
+  assert.equal(result.activeDays, 1);
+  assert.equal(
+    teamHelpers.participation(
+      [{ ...a, completedAt: "2026-09-01T12:00:00Z" }],
+      now,
+    ).status,
+    "inactive",
+  );
+});
+
+test("assignment completion enforces publication and audience and handles progress and overdue", () => {
+  const now = new Date("2026-10-12T16:00:00Z");
+  const a = {
+    title: "Biology",
+    published: true,
+    studentUids: ["alice"],
+    questionCount: 10,
+    dueAt: "2026-10-11T00:00:00Z",
+  };
+  assert.equal(
+    teamHelpers.assignmentCompletion("a", a, undefined, "bob", now),
+    null,
+  );
+  assert.equal(
+    teamHelpers.assignmentCompletion(
+      "a",
+      { ...a, published: false },
+      undefined,
+      "alice",
+      now,
+    ),
+    null,
+  );
+  assert.equal(
+    teamHelpers.assignmentCompletion(
+      "a",
+      { ...a, status: "cancelled" },
+      undefined,
+      "alice",
+      now,
+    ),
+    null,
+  );
+  assert.equal(
+    teamHelpers.assignmentCompletion("a", a, undefined, "alice", now).status,
+    "overdue",
+  );
+  assert.equal(
+    teamHelpers.assignmentCompletion(
+      "a",
+      a,
+      { completedQuestions: 12 },
+      "alice",
+      now,
+    ).completedQuestions,
+    10,
+  );
+  assert.equal(
+    teamHelpers.assignmentCompletion(
+      "a",
+      a,
+      { completedQuestions: 10 },
+      "alice",
+      now,
+    ).status,
+    "completed",
+  );
+  assert.equal(
+    teamHelpers.assignmentCompletion(
+      "a",
+      { ...a, audience: "team", dueAt: null },
+      { completedQuestions: 2 },
+      "bob",
+      now,
+    ).status,
+    "in progress",
+  );
 });

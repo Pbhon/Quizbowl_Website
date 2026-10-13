@@ -1,5 +1,9 @@
 import "server-only";
-import { subjectDifficulty, participation } from "@/lib/team-dashboard";
+import {
+  subjectDifficulty,
+  participation,
+  assignmentCompletion,
+} from "@/lib/team-dashboard";
 import type { Firestore } from "firebase-admin/firestore";
 import { siteTeam } from "./site-team";
 import { PracticeError } from "./practice-persistence";
@@ -52,6 +56,7 @@ export async function loadTeamDashboard(
   now = new Date(),
 ) {
   const members = await loadTeamRoster(db, teamId);
+  const assignments = await db.collection(`teams/${teamId}/assignments`).get();
   const histories = await Promise.all(
     members
       .filter((m) => m.role === "student")
@@ -66,11 +71,43 @@ export async function loadTeamDashboard(
               completedAt: timestampISO(doc.data().completedAt),
             }) as StatisticAttempt,
         );
-        return { member, history };
+        const completion = await Promise.all(
+          assignments.docs.map(async (doc) => {
+            const data = doc.data();
+            const normalized = { ...data, dueAt: timestampISO(data.dueAt) };
+            if (
+              !assignmentCompletion(
+                doc.id,
+                normalized,
+                undefined,
+                member.uid,
+                now,
+              )
+            )
+              return null;
+            const progress = await doc.ref
+              .collection("progress")
+              .doc(member.uid)
+              .get();
+            return assignmentCompletion(
+              doc.id,
+              normalized,
+              progress.data(),
+              member.uid,
+              now,
+            );
+          }),
+        );
+        return {
+          member,
+          history,
+          assignments: completion.filter((row) => row !== null),
+        };
       }),
   );
-  const students = histories.map(({ member, history }) => ({
+  const students = histories.map(({ member, history, assignments }) => ({
     ...member,
+    assignments,
     statistics: buildStatistics(history, now, timeZone),
     heatmap: subjectDifficulty(history, now, timeZone),
     participation: participation(history, now, timeZone),

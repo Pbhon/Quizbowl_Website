@@ -165,6 +165,11 @@ function Workspace({ user }: { user: User }) {
               </div>
             </section>
           )}
+          <AssignmentTable
+            students={(data?.students || []).filter(
+              (s) => !selected || s.uid === selected,
+            )}
+          />
           <ParticipationTable students={data?.students || []} />
           <ul className="divide-y">
             {members.map((member) => (
@@ -545,6 +550,78 @@ function ParticipationTable({
                       {value}
                     </td>
                   ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function AssignmentTable({
+  students,
+}: {
+  students: TeamDashboardData["students"];
+}) {
+  const rows = students.flatMap((student) =>
+    student.assignments.map((assignment) => ({
+      ...assignment,
+      uid: student.uid,
+      displayName: student.displayName,
+    })),
+  );
+  return (
+    <section className="space-y-3">
+      <h2 className="text-xl font-semibold">Assignment completion</h2>
+      <p className="text-sm text-muted-foreground">
+        Published assignments addressed to current students. Completion uses
+        saved assignment progress; ordinary practice is not automatically
+        credited. Assignment creation and automatic progress tracking are task
+        10.
+      </p>
+      {!rows.length ? (
+        <Notice>No published assignments for these students.</Notice>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <caption className="sr-only">Assignment completion</caption>
+            <thead>
+              <tr>
+                {[
+                  "Student",
+                  "Assignment",
+                  "Progress",
+                  "Status",
+                  "Deadline",
+                ].map((label) => (
+                  <th scope="col" className="p-2" key={label}>
+                    {label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr className="border-t" key={`${row.uid}:${row.id}`}>
+                  <th scope="row" className="p-2">
+                    {row.displayName}
+                  </th>
+                  <td className="p-2">{row.title}</td>
+                  <td className="p-2">
+                    {row.completedQuestions} /{" "}
+                    {row.questionCount || "Not configured"}
+                  </td>
+                  <td className="p-2">{row.status}</td>
+                  <td className="p-2">
+                    {row.dueAt
+                      ? new Intl.DateTimeFormat(undefined, {
+                          dateStyle: "medium",
+                          timeZone: students[0]?.statistics.timeZone || "UTC",
+                        }).format(new Date(row.dueAt))
+                      : "No deadline"}
+                  </td>
                 </tr>
               ))}
             </tbody>
