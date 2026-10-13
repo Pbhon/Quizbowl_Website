@@ -201,7 +201,7 @@ production build pass. See README.md for the assignment progress contract and
 counting rules.
 
 ## 10. Teacher Assignments & Shared Decks
-- [ ] **[Medium]** Create practice assignments
+- [x] **[Medium]** Create practice assignments
 - [ ] **[Medium]** Assign work to individual students
 - [ ] **[Medium]** Assign work to student groups or the entire team
 - [ ] **[Low]** Set question counts and difficulty ranges
