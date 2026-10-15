@@ -2,6 +2,7 @@ import {
   assignmentCompletion,
   type AssignmentCompletion,
 } from "./team-dashboard";
+import { currentAssignmentProgress } from "./assignment-requirements";
 export type AssignmentResult = AssignmentCompletion & {
   uid: string;
   displayName: string;
@@ -17,6 +18,7 @@ export function assignmentResult(
   uid: string,
   displayName: string,
 ): AssignmentResult | null {
+  progress = currentAssignmentProgress(assignment, progress);
   const completion = assignmentCompletion(id, assignment, progress, uid);
   if (!completion) return null;
   const counts = [progress?.correct, progress?.incorrect, progress?.skipped];

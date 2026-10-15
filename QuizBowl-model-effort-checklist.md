@@ -207,23 +207,20 @@ counting rules.
 - [x] **[Low]** Set question counts and difficulty ranges
 - [x] **[Low]** Set category, subcategory, and topic requirements
 - [x] **[Low]** Set assignment deadlines
-- [ ] **[High]** Automatically track assignment progress
+- [x] **[High]** Automatically track assignment progress
 - [x] **[Low]** View student completion and performance
 - [x] **[Medium]** Create teacher-curated study decks
 - [ ] **[High]** Share teacher decks with students
 - [x] **[Medium]** Allow students to practice and export shared decks
 - [ ] **[High]** Prevent unauthorized edits to teacher-created decks
 
-Task 10's nine non-High subtasks are complete. `/assignments` supports staff
-creation/editing, draft/publication, individual/group/team audiences, question
-counts/types, difficulty ranges, subject/topic requirements, local-time deadlines,
-and saved completion/performance views. Students see only their published work
-and own results. `/teacher-decks` creates private staff-curated decks with existing
-question/tag/note editing. Students can practice already-shared original decks in
-the reader and export APKG/CSV through `/decks`. The three High subtasks remain
-unchecked: automatic progress, teacher sharing, and teacher-specific edit policies.
-Missing assignment progress is not inferred from ordinary practice. See README.md
-for the saved progress contract and deferred scope.
+Task 10's non-High subtasks and automatic assignment progress are complete.
+Students start assignment-bound sessions from `/assignments`; requirements are
+checked server-side and progress updates atomically with final responses. Bonuses
+count once after all parts; retries and repeated source questions cannot add credit.
+Requirement changes start a new progress version. Ordinary practice is not credited.
+Teacher sharing and teacher-specific edit protections remain the two High subtasks.
+See README.md for the progress/version contract and validation.
 
 ## 11. Team Calendar & Announcements
 - [ ] **[Medium]** Build a shared team calendar

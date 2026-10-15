@@ -558,45 +558,50 @@ emulator browser coverage is in `tests/e2e/team-dashboard.spec.ts` for desktop a
 mobile, including role revocation, school isolation, flashcard review recording,
 assignment progress, charts, exports, failure recovery, and account switching.
 
-### Task 10: assignments and teacher curation (non-High subtasks)
+### Task 10: assignments and teacher-curated decks
 
 Verified school teachers/admins create, edit, draft, and publish assignments at
-`/assignments`. Students see only published assignments addressed to them, with
-instructions, question type/count, difficulty range 0–10, category/subcategory,
-optional topic requirement, and optional deadline. Select one student, a group of
-up to 200 current students, or the entire team. Selected groups are saved as a
-snapshot of student IDs; team assignments apply to current team members. Deadlines
-are stored as UTC ISO instants and entered/displayed in the browser's local timezone.
-Question counts support 1–500 questions and are requirements, not a single session
-size. The existing QBReader reader continues to support up to 50 per session.
+`/assignments`. Students see their published assignments, instructions, question
+count/type, difficulty range 0–10, category/subcategory, topic requirement and
+optional deadline. Select one student, a saved group selection of up to 200 current
+students, or the entire current team. Deadlines use local browser time on screen
+and UTC ISO instants in storage. Late work is accepted and incomplete work remains
+overdue after its deadline.
 
-Completion/performance reads `teams/{teamId}/assignments/{id}/progress/{uid}`.
-`completedQuestions` is a whole-question count (bonus parts count as one question).
-Optional nonnegative integer `correct`, `incorrect`, and `skipped` fields count
-responses. Accuracy is correct / (correct + incorrect), excluding skips. Absent
-or malformed performance fields display as unknown; missing progress is not
-started. This release does not write progress or credit ordinary practice. The
-High automatic tracking subtask is still deferred. The team dashboard's existing
-assignment completion viewer continues to read the same records.
+Students choose **Practice assignment** to start a saved reader session with up to
+50 remaining questions. The server supplies the assignment filters, checks returned
+questions against all requirements, excludes already-completed sources, and binds
+the session to the current requirements version. Topic requirements match every
+whitespace-separated term, case-insensitively, in question text or official answers.
+Ordinary practice, missed-question retries, shared-deck practice and flashcard
+reviews do not earn assignment credit.
 
-Teachers curate private decks at `/teacher-decks`, using existing topic question
-retrieval, saved questions, tags, card notes, and editing. Creation records the
-verified staff creator in `curatedBy`. Adding saved questions from practice/history
-works through the usual deck picker. High teacher-sharing and teacher-specific
-edit-policy work remains deferred; existing Task 6 school-sharing/owner permissions
-remain in place. Students can study and export already-shared decks at `/decks`,
-or choose **Practice shared deck** to start a saved reader session using the first
-1–50 original questions. This source uses deck questions, so QBReader filters do
-not alter it. Starting practice and APKG export check live membership and sharing;
-revocation blocks new sessions/downloads. Already-started sessions retain their
-saved question snapshot. CSV exports use cards already loaded into the browser.
+Progress is stored at `teams/{teamId}/assignments/{id}/progress/{uid}`. Each original
+question has one receipt at `versions/{requirementsVersion}/questions/{sourceHash}`
+beneath that progress document. All bonus parts must reach a final answer or skip
+before the question counts once. Correct/incorrect/skipped count the first final
+response to each source part, even across sessions; prompts and replays do not add
+credit. Accuracy excludes skips. The attempt, submission receipt, session totals,
+question receipt and assignment totals commit together. Transactions recheck current
+membership, student role, publication, audience and requirements. Completing the
+target stops further credit, including from concurrent sessions.
 
-Validation: assignment unit tests cover staff authorization, targeting, requirements,
-deadlines, saved result counting, student visibility, and teacher provenance.
-Firebase-emulator browser tests cover assignment editing, student isolation,
-teacher curation, shared-deck practice, APKG/CSV downloads, desktop/mobile layout,
-and sharing revocation. Run `node --test tests/assignments.test.mjs` for unit tests;
-run `tests/e2e/assignments.spec.ts` with the existing Firebase emulator setup for
-browser tests. No Firebase rules deployment is needed: assignment access uses the
-existing server authentication and staff/membership checks; direct client writes
-remain denied.
+Changing count, type, difficulty, subject or topic increments `requirementsVersion`.
+Old sessions cannot earn new credit; completion views show the current version and
+preserve old receipts for audit. Editing instructions, title, audience or deadline
+retains progress. Existing records without an explicit version are version 1.
+Missing progress is not started; absent/malformed performance is unknown. Team and
+student dashboards read the same completion contract.
+
+Teachers curate original question collections, tags and notes at `/teacher-decks`.
+Teacher sharing and teacher-specific edit protections are the remaining Task 10
+High subtasks. Students can already study, copy, practice and export existing school
+shares via `/decks`. Shared-reader sessions retain original question snapshots;
+CSV exports use cards already loaded in the browser.
+
+Unit tests cover targeting, filters, requirement versions, transaction retries,
+concurrent/duplicate submissions, bonus parts and revoked assignment access.
+Firebase-emulator browser tests exercise student assignment practice and saved
+results on desktop/mobile. Run the existing assignment/practice/team test scripts
+and `tests/e2e/task10-high.spec.ts` with Firebase emulators. Direct client writes to
+assignment and progress documents remain denied by the deployed rules.

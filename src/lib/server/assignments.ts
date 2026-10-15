@@ -8,6 +8,10 @@ import { timestampISO } from "./dashboard";
 import { assignmentResult, type PracticeAssignment } from "@/lib/assignments";
 import { siteTeam } from "./site-team";
 import { subjects } from "@/lib/practice";
+import {
+  requirementFields,
+  requirementsVersion,
+} from "@/lib/assignment-requirements";
 
 export async function assignmentWorkspace(
   db: Firestore,
@@ -211,13 +215,31 @@ export async function saveAssignment(
     }
     if (body.action === "update" && !existing.exists)
       throw new PracticeError("Assignment not found.", 404);
+    const previous = existing.data();
+    const requirementsChanged =
+      previous &&
+      requirementFields.some(
+        (field) =>
+          (previous[field] ??
+            (field === "difficultyMin"
+              ? 0
+              : field === "difficultyMax"
+                ? 10
+                : field === "type"
+                  ? "tossup"
+                  : "")) !== data[field],
+      );
+    const version = previous
+      ? requirementsVersion(previous) + (requirementsChanged ? 1 : 0)
+      : 1;
     if (body.action === "create")
       tx.create(ref, {
         ...data,
+        requirementsVersion: version,
         createdBy: uid,
         createdAt: FieldValue.serverTimestamp(),
       });
-    else tx.update(ref, data);
+    else tx.update(ref, { ...data, requirementsVersion: version });
   });
   return { assignmentId: ref.id };
 }

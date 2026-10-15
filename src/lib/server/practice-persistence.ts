@@ -4,6 +4,10 @@ import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { getFirebaseAdmin } from "@/lib/firebase/admin";
 import type { Question, Outcome } from "@/lib/practice";
 import { qbreader } from "@/lib/server/qbreader";
+import {
+  prepareAssignmentCredit,
+  type AssignmentBinding,
+} from "./assignment-progress";
 
 export class PracticeError extends Error {
   constructor(
@@ -318,7 +322,17 @@ export async function savePracticeAttempt(
         "Another response was already recorded for this part.",
         409,
       );
+    const writeAssignmentCredit = await prepareAssignmentCredit(
+      db,
+      transaction,
+      uid,
+      session.data()!.assignment as AssignmentBinding | undefined,
+      question,
+      input.part,
+      outcome,
+    );
     const timestamp = FieldValue.serverTimestamp();
+    writeAssignmentCredit();
     transaction.create(receiptRef, {
       input: submissionBinding(input),
       submission,

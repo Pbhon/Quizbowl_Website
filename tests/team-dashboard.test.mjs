@@ -36,6 +36,7 @@ class PracticeError extends Error {
 }
 const stats = load("src/lib/statistics.ts");
 const teamHelpers = load("src/lib/team-dashboard.ts", {
+  "./assignment-requirements": load("src/lib/assignment-requirements.ts"),
   "./statistics": stats,
 });
 const server = load("src/lib/server/team-dashboard.ts", {

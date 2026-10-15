@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { User } from "firebase/auth";
+import Link from "next/link";
 import { useAuth } from "./auth-provider";
 import { AccountGuard } from "./account-guard";
 import { PageHeading } from "./page-heading";
@@ -145,9 +146,20 @@ function Workspace({ user }: { user: User }) {
                   </p>
                 )}
                 <p className="text-sm text-muted-foreground">
-                  Completion and performance use saved assignment records.
-                  Automatic progress tracking is pending.
+                  Practice from this assignment to update completion and
+                  performance automatically. Finish every bonus part to count
+                  one question. Late work is accepted.
                 </p>
+                {!data.isStaff &&
+                  assignment.results[0]?.status !== "completed" && (
+                    <Button asChild variant="outline">
+                      <Link
+                        href={`/practice?assignmentId=${encodeURIComponent(assignment.id)}`}
+                      >
+                        Practice assignment
+                      </Link>
+                    </Button>
+                  )}
                 {assignment.results?.length ? (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">

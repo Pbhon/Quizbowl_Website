@@ -2,13 +2,35 @@ import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import test from "node:test";
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import ts from "typescript";
+function support(path, imports) {
+  const mod = { exports: {} };
+  vm.runInNewContext(
+    ts.transpileModule(readFileSync(path, "utf8"), {
+      compilerOptions: {
+        module: ts.ModuleKind.CommonJS,
+        target: ts.ScriptTarget.ES2022,
+      },
+    }).outputText,
+    {
+      module: mod,
+      exports: mod.exports,
+      require: (id) => {
+        if (id in imports) return imports[id];
+        throw Error(id);
+      },
+      URLSearchParams,
+    },
+  );
+  return mod.exports;
+}
 function load(
   verifyIdToken = async () => ({ uid: "student-one" }),
   checker = async () => ({ directive: "accept", directedPrompt: null }),
 ) {
   const compiledModule = { exports: {} };
+  let assignmentSupport;
   const code = ts.transpileModule(
     readFileSync("src/lib/server/practice-persistence.ts", "utf8"),
     {
@@ -22,6 +44,23 @@ function load(
     module: compiledModule,
     exports: compiledModule.exports,
     require: (id) => {
+      if (id === "./assignment-progress")
+        return (assignmentSupport = support(
+          "src/lib/server/assignment-progress.ts",
+          {
+            "server-only": {},
+            "node:crypto": { createHash, randomUUID },
+            "firebase-admin/firestore": {
+              FieldValue: { serverTimestamp: () => "server-time" },
+            },
+            "@/lib/assignment-requirements": support(
+              "src/lib/assignment-requirements.ts",
+              {},
+            ),
+            "./site-team": { siteTeam: () => ({ id: "school" }) },
+            "./practice-persistence": compiledModule.exports,
+          },
+        ));
       if (id === "server-only") return {};
       if (id === "node:crypto") return { randomUUID };
       if (id === "firebase-admin/firestore")
@@ -41,7 +80,7 @@ function load(
     URL,
     URLSearchParams,
   });
-  return compiledModule.exports;
+  return { ...compiledModule.exports, assignmentSupport };
 }
 function request(headers = {}) {
   return new Request("http://localhost:3103/api/practice/attempts", {
@@ -143,12 +182,32 @@ function memoryFirestore(initial, retryCallback = false) {
   let queue = Promise.resolve();
   const ref = (path) => ({
     path,
-    collection: (name) => ({ doc: (id) => ref(`${path}/${name}/${id}`) }),
+    id: path.split("/").at(-1),
+    collection: (name) => collection(`${path}/${name}`),
   });
-  const snapshot = (ref) => ({
-    exists: records.has(ref.path),
-    data: () => structuredClone(records.get(ref.path)),
+  const collection = (path) => ({
+    doc: (id) => ref(`${path}/${id}`),
+    where: (field, _operator, value) => ({ query: true, path, field, value }),
   });
+  const snapshot = (ref) =>
+    ref.query
+      ? {
+          docs: [...records]
+            .filter(
+              ([path, data]) =>
+                path.startsWith(`${ref.path}/`) &&
+                !path.slice(ref.path.length + 1).includes("/") &&
+                data[ref.field] === ref.value,
+            )
+            .map(([path, data]) => ({
+              id: path.split("/").at(-1),
+              data: () => structuredClone(data),
+            })),
+        }
+      : {
+          exists: records.has(ref.path),
+          data: () => structuredClone(records.get(ref.path)),
+        };
   const getAll = async (...refs) => refs.map(snapshot);
   return {
     records,
@@ -159,7 +218,14 @@ function memoryFirestore(initial, retryCallback = false) {
         function transaction() {
           const writes = [];
           return {
-            getAll,
+            get: async (ref) => {
+              assert.equal(writes.length, 0, "read before transaction writes");
+              return snapshot(ref);
+            },
+            getAll: async (...refs) => {
+              assert.equal(writes.length, 0, "read before transaction writes");
+              return getAll(...refs);
+            },
             create: (ref, data) => writes.push({ kind: "create", ref, data }),
             set: (ref, data) => writes.push({ kind: "set", ref, data }),
             update: (ref, data) => writes.push({ kind: "update", ref, data }),
@@ -368,4 +434,204 @@ test("UUID casing and whitespace normalize; legacy attempts gain a receipt witho
     1,
   );
   await assert.rejects(() => fixture.save({ part: 1 }), { status: 409 });
+});
+function assignmentFixture(checker, retry = true) {
+  const fixture = persistenceFixture(checker, retry);
+  const assignmentPath = "teams/school/assignments/work";
+  const progressPath = `${assignmentPath}/progress/student-one`;
+  fixture.db.records.set(assignmentPath, {
+    published: true,
+    audience: "team",
+    questionCount: 1,
+    type: "bonus",
+    difficultyMin: 3,
+    difficultyMax: 5,
+    category: "History",
+    subcategory: "World History",
+    topic: "explorer",
+    requirementsVersion: 1,
+  });
+  fixture.db.records.set("teams/school/members/student-one", {});
+  fixture.db.records.get(fixture.sessionPath).assignment = {
+    id: "work",
+    teamId: "school",
+    requirementsVersion: 1,
+  };
+  return { ...fixture, assignmentPath, progressPath };
+}
+test("assignment bonuses count once after all parts, across sessions, concurrent retries and callbacks", async () => {
+  const fixture = assignmentFixture(async () => ({ directive: "accept" }));
+  await Promise.all(Array.from({ length: 4 }, () => fixture.save()));
+  assert.equal(
+    fixture.db.records.get(fixture.progressPath).completedQuestions,
+    0,
+  );
+  assert.equal(fixture.db.records.get(fixture.progressPath).correct, 1);
+  const otherId = randomUUID(),
+    otherPath = `users/student-one/practiceSessions/${otherId}`;
+  fixture.db.records.set(otherPath, {
+    ...fixture.db.records.get(fixture.sessionPath),
+    attemptedParts: 0,
+    correct: 0,
+  });
+  fixture.db.records.set(
+    `${otherPath}/questions/0`,
+    fixture.db.records.get(`${fixture.sessionPath}/questions/0`),
+  );
+  await fixture.save({ sessionId: otherId, requestId: randomUUID() });
+  assert.equal(fixture.db.records.get(fixture.progressPath).correct, 1);
+  await Promise.all([
+    fixture.save({
+      part: 1,
+      requestId: randomUUID(),
+      skipped: true,
+      givenAnswer: "",
+    }),
+    fixture.save({ sessionId: otherId, part: 1, requestId: randomUUID() }),
+  ]);
+  const progress = fixture.db.records.get(fixture.progressPath);
+  assert.equal(progress.completedQuestions, 1);
+  assert.equal(progress.correct, 1);
+  assert.equal(progress.skipped, 1);
+  assert.equal(
+    [...fixture.db.records.keys()].filter((path) =>
+      path.startsWith(`${fixture.progressPath}/versions/`),
+    ).length,
+    1,
+  );
+});
+test("assignment prompts, ordinary practice and revoked audiences do not earn progress", async () => {
+  const prompt = assignmentFixture(async () => ({
+    directive: "prompt",
+    directedPrompt: "More specific",
+  }));
+  await prompt.save();
+  assert.equal(prompt.db.records.has(prompt.progressPath), false);
+  for (const change of [
+    "membership",
+    "draft",
+    "audience",
+    "staff",
+    "version",
+    "school",
+  ]) {
+    const fixture = assignmentFixture(async () => ({ directive: "accept" }));
+    if (change === "membership")
+      fixture.db.records.delete("teams/school/members/student-one");
+    if (change === "draft")
+      fixture.db.records.get(fixture.assignmentPath).published = false;
+    if (change === "audience")
+      Object.assign(fixture.db.records.get(fixture.assignmentPath), {
+        audience: "students",
+        studentUids: ["someone-else"],
+      });
+    if (change === "staff")
+      fixture.db.records.set("staff/student-one", {
+        role: "teacher",
+        teamId: "school",
+      });
+    if (change === "version")
+      fixture.db.records.get(fixture.assignmentPath).requirementsVersion = 2;
+    if (change === "school")
+      fixture.db.records.get(fixture.sessionPath).assignment.teamId = "other";
+    await assert.rejects(fixture.save(), (error) =>
+      [403, 409].includes(error.status),
+    );
+    assert.equal(fixture.db.records.has(fixture.progressPath), false);
+    assert.equal(fixture.db.records.has(fixture.attemptPath), false);
+  }
+  const ordinary = assignmentFixture(async () => ({ directive: "accept" }));
+  delete ordinary.db.records.get(ordinary.sessionPath).assignment;
+  await ordinary.save();
+  assert.equal(ordinary.db.records.has(ordinary.progressPath), false);
+});
+test("assignment credit enforces requirements and resets obsolete progress versions", async () => {
+  const mismatch = assignmentFixture(async () => ({ directive: "accept" }));
+  mismatch.db.records.get(`${mismatch.sessionPath}/questions/0`).difficulty =
+    10;
+  await assert.rejects(mismatch.save(), (error) => error.status === 409);
+  assert.equal(mismatch.db.records.has(mismatch.progressPath), false);
+  const fixture = assignmentFixture(async () => ({ directive: "accept" }));
+  fixture.db.records.set(fixture.progressPath, {
+    requirementsVersion: 0,
+    completedQuestions: 99,
+    correct: 99,
+  });
+  fixture.db.records.get(fixture.assignmentPath).requirementsVersion = 2;
+  fixture.db.records.get(fixture.sessionPath).assignment.requirementsVersion =
+    2;
+  await fixture.save();
+  assert.equal(fixture.db.records.get(fixture.progressPath).correct, 1);
+  assert.equal(
+    fixture.db.records.get(fixture.progressPath).completedQuestions,
+    0,
+  );
+  assert.equal(
+    fixture.db.records.get(fixture.progressPath).requirementsVersion,
+    2,
+  );
+});
+test("assignment sessions enforce live requirements, completed exclusions and server bindings", async () => {
+  const fixture = assignmentFixture(async () => ({ directive: "accept" }));
+  const source = await fixture.assignmentSupport.assignmentPracticeSource(
+    fixture.db,
+    "student-one",
+    "work",
+  );
+  assert.equal(source.count, 1);
+  const question = fixture.db.records.get(`${fixture.sessionPath}/questions/0`);
+  const created = await fixture.assignmentSupport.createAssignmentSession(
+    fixture.db,
+    "student-one",
+    source.binding,
+    [question, question, { ...question, id: "bad", difficulty: 10 }],
+  );
+  assert.equal(created.questions.length, 1);
+  const createdPath = `users/student-one/practiceSessions/${created.sessionId}`;
+  assert.equal(
+    fixture.db.records.get(createdPath).assignment.requirementsVersion,
+    1,
+  );
+  await fixture.save();
+  await fixture.save({
+    part: 1,
+    requestId: randomUUID(),
+    skipped: true,
+    givenAnswer: "",
+  });
+  await assert.rejects(
+    fixture.assignmentSupport.assignmentPracticeSource(
+      fixture.db,
+      "student-one",
+      "work",
+    ),
+    (e) => e.status === 409,
+  );
+  await assert.rejects(
+    fixture.assignmentSupport.createAssignmentSession(
+      fixture.db,
+      "student-one",
+      source.binding,
+      [question],
+    ),
+    (e) => e.status === 409,
+  );
+  fixture.db.records.get(fixture.assignmentPath).questionCount = 2;
+  const remaining = await fixture.assignmentSupport.assignmentPracticeSource(
+    fixture.db,
+    "student-one",
+    "work",
+  );
+  assert.equal(remaining.count, 1);
+  assert.equal(remaining.excluded[0], question.id);
+  fixture.db.records.get(fixture.assignmentPath).requirementsVersion = 2;
+  await assert.rejects(
+    fixture.assignmentSupport.createAssignmentSession(
+      fixture.db,
+      "student-one",
+      source.binding,
+      [question],
+    ),
+    (e) => e.status === 409,
+  );
 });

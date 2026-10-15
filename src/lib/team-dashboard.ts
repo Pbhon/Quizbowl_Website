@@ -3,6 +3,7 @@ import {
   type StatisticAttempt,
   type Performance,
 } from "./statistics";
+import { currentAssignmentProgress } from "./assignment-requirements";
 export type TeamMember = {
   uid: string;
   displayName: string;
@@ -107,6 +108,7 @@ export function assignmentCompletion(
   uid: string,
   now = new Date(),
 ): AssignmentCompletion | null {
+  progress = currentAssignmentProgress(assignment, progress);
   if (
     assignment.published !== true ||
     assignment.status === "cancelled" ||

@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import ts from "typescript";
 
 // Execute the real TypeScript route handlers with only the upstream HTTP call replaced.
-function load(path, upstream) {
+function load(path, upstream, options = {}) {
   const compiledModule = { exports: {} };
   const code = ts.transpileModule(
     readFileSync(new URL(`../src/${path}.ts`, import.meta.url), "utf8"),
@@ -20,30 +20,35 @@ function load(path, upstream) {
     module: compiledModule,
     exports: compiledModule.exports,
     require: (id) =>
-      id === "@/lib/practice"
-        ? load("lib/practice", upstream)
-        : id === "@/lib/server/qbreader"
-          ? { qbreader: upstream }
-          : id === "@/lib/server/decks"
-            ? {
-                exportDeck: async () => {
-                  throw new Error("Unexpected shared practice");
-                },
-              }
-            : id === "@/lib/server/history"
-              ? {
-                  historyQuestion: async () => {
-                    throw new Error("Unexpected history retry");
-                  },
-                }
-              : id === "@/lib/server/practice-persistence"
+      id === "@/lib/server/assignment-progress"
+        ? options.assignmentSupport || {}
+        : id === "@/lib/assignment-requirements"
+          ? load("lib/assignment-requirements", upstream)
+          : id === "@/lib/practice"
+            ? load("lib/practice", upstream)
+            : id === "@/lib/server/qbreader"
+              ? { qbreader: upstream }
+              : id === "@/lib/server/decks"
                 ? {
-                    authenticatePractice: async () => null,
-                    PracticeError: class extends Error {},
+                    exportDeck: async () => {
+                      throw new Error("Unexpected shared practice");
+                    },
                   }
-                : (() => {
-                    throw new Error(`Unexpected import: ${id}`);
-                  })(),
+                : id === "@/lib/server/history"
+                  ? {
+                      historyQuestion: async () => {
+                        throw new Error("Unexpected history retry");
+                      },
+                    }
+                  : id === "@/lib/server/practice-persistence"
+                    ? {
+                        authenticatePractice: async () =>
+                          options.account || null,
+                        PracticeError: class extends Error {},
+                      }
+                    : (() => {
+                        throw new Error(`Unexpected import: ${id}`);
+                      })(),
     Response,
     URLSearchParams,
     Set,
@@ -194,5 +199,66 @@ test("answer checking preserves directed prompts and rejects malformed verdicts"
   assert.equal(
     (await POST(request({ answerline: "DNA", givenAnswer: "DNA" }))).status,
     502,
+  );
+});
+test("assignment fetching ignores client overrides and filters every returned question", async () => {
+  let received;
+  const spec = {
+    type: "tossup",
+    difficultyMin: 0,
+    difficultyMax: 3,
+    category: "Science",
+    subcategory: "Biology",
+    topic: "Clue",
+  };
+  const route = load(
+    "app/api/practice/questions/route",
+    async (_endpoint, params) => {
+      assert.equal(params.get("q"), "Clue");
+      return {
+        tossups: {
+          questionArray: [
+            raw("already"),
+            raw("valid"),
+            { ...raw("hard"), difficulty: 9 },
+            { ...raw("wrong"), category: "History" },
+          ],
+        },
+      };
+    },
+    {
+      account: { db: {}, uid: "student" },
+      assignmentSupport: {
+        assignmentPracticeSource: async (_db, uid, id) => {
+          assert.equal(uid, "student");
+          assert.equal(id, "work");
+          return {
+            data: spec,
+            count: 2,
+            excluded: ["already"],
+            binding: { id: "work" },
+          };
+        },
+        createAssignmentSession: async (_db, _uid, binding, questions) => {
+          received = questions;
+          assert.equal(binding.id, "work");
+          return { sessionId: "new", questions };
+        },
+      },
+    },
+  );
+  const response = await route.POST(
+    request({
+      assignmentId: "work",
+      count: 50,
+      type: "bonus",
+      category: "History",
+      topic: "ignore me",
+    }),
+  );
+  assert.equal(response.status, 200);
+  assert.deepEqual(
+    Array.from(received, (question) => question.id),
+    ["valid"],
   );
 });

@@ -36,9 +36,17 @@ const roster = [
   { uid: "teacher", role: "teacher" },
 ];
 const statistics = load("src/lib/statistics.ts", {});
-const team = load("src/lib/team-dashboard.ts", { "./statistics": statistics });
-const helpers = load("src/lib/assignments.ts", { "./team-dashboard": team });
+const requirements = load("src/lib/assignment-requirements.ts", {});
+const team = load("src/lib/team-dashboard.ts", {
+  "./statistics": statistics,
+  "./assignment-requirements": requirements,
+});
+const helpers = load("src/lib/assignments.ts", {
+  "./team-dashboard": team,
+  "./assignment-requirements": requirements,
+});
 const imports = {
+  "@/lib/assignment-requirements": requirements,
   "@/lib/assignments": helpers,
   "./site-team": { siteTeam: () => ({ id: "school" }) },
   "@/lib/practice": load("src/lib/practice.ts", {}),

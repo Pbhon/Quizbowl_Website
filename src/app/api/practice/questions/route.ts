@@ -3,6 +3,11 @@ import { qbreader } from "@/lib/server/qbreader";
 import { historyQuestion } from "@/lib/server/history";
 import { exportDeck } from "@/lib/server/decks";
 import {
+  assignmentPracticeSource,
+  createAssignmentSession,
+} from "@/lib/server/assignment-progress";
+import { matchesAssignment } from "@/lib/assignment-requirements";
+import {
   authenticatePractice,
   createPracticeSession,
   PracticeError,
@@ -11,12 +16,34 @@ import {
 export async function POST(request: Request) {
   try {
     const account = await authenticatePractice(request, false);
-    const body = await request.json();
+    let body = await request.json();
     if (!body || typeof body !== "object")
       return Response.json(
         { error: "Invalid practice filters." },
         { status: 400 },
       );
+    let assignment:
+      Awaited<ReturnType<typeof assignmentPracticeSource>> | undefined;
+    if (body.assignmentId !== undefined) {
+      if (!account)
+        throw new PracticeError("Sign in to practice an assignment.", 401);
+      if (body.sharedId !== undefined || body.retryAttemptId !== undefined)
+        throw new PracticeError("Choose one practice source.", 400);
+      assignment = await assignmentPracticeSource(
+        account.db,
+        account.uid,
+        body.assignmentId,
+      );
+      body = {
+        type: assignment.data.type ?? "tossup",
+        count: assignment.count,
+        difficulty: "",
+        category: assignment.data.category ?? "",
+        subcategory: assignment.data.subcategory ?? "",
+        topic: assignment.data.topic ?? "",
+        excluded: assignment.excluded,
+      };
+    }
     if (body.sharedId !== undefined) {
       if (!account)
         throw new PracticeError("Sign in to practice a shared deck.", 401);
@@ -126,13 +153,28 @@ export async function POST(request: Request) {
       for (const value of raw) {
         if (!value || typeof value !== "object") continue;
         const question = normalizeQuestion(value, type);
-        if (question && !seen.has(question.id) && questions.length < count) {
+        if (
+          question &&
+          !seen.has(question.id) &&
+          questions.length < count &&
+          (!assignment || matchesAssignment(question, assignment.data))
+        ) {
           seen.add(question.id);
           questions.push(question);
         }
       }
-      if (raw.length < 100) break;
+      if (raw.length < 100 && (searching || !assignment)) break;
     }
+    if (assignment && account)
+      return Response.json(
+        await createAssignmentSession(
+          account.db,
+          account.uid,
+          assignment.binding,
+          questions,
+        ),
+        { headers: { "Cache-Control": "no-store" } },
+      );
     const sessionId =
       account && questions.length
         ? await createPracticeSession(account.db, account.uid, questions)
