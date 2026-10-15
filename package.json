@@ -18,6 +18,7 @@
     "test:statistics": "node --test tests/statistics.test.mjs",
     "test:team": "node --test tests/team-dashboard.test.mjs",
     "test:assignments": "node --test tests/assignments.test.mjs",
+    "test:calendar": "node --test tests/calendar.test.mjs",
     "test:history": "node --test tests/history.test.mjs",
     "test:accounts": "node --test tests/team-session.test.mjs",
     "test:anki": "node --test tests/anki-export.test.mjs tests/anki-package.test.mjs",

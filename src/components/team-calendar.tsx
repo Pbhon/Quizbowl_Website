@@ -48,6 +48,7 @@ function Calendar({ user }: { user: User }) {
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
   const [editing, setEditing] = useState<CalendarEvent | null>(null);
+  const [exporting, setExporting] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
     calendarRequest(user, undefined, controller.signal)
@@ -79,6 +80,50 @@ function Calendar({ user }: { user: User }) {
         Refresh calendar
       </Button>
       {error && <Notice error>{error}</Notice>}
+      {data && (
+        <div className="space-y-2">
+          <Button
+            variant="outline"
+            disabled={exporting}
+            onClick={async () => {
+              setExporting(true);
+              setError("");
+              try {
+                const response = await fetch("/api/calendar?format=ics", {
+                  cache: "no-store",
+                  headers: {
+                    Authorization: `Bearer ${await user.getIdToken()}`,
+                  },
+                });
+                if (!response.ok)
+                  throw new Error((await response.json()).error);
+                const url = URL.createObjectURL(await response.blob()),
+                  link = document.createElement("a");
+                link.href = url;
+                link.download = "quizbowl-team.ics";
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+              } catch (failure) {
+                setError(
+                  failure instanceof Error
+                    ? failure.message
+                    : "Export failed. Please retry.",
+                );
+              } finally {
+                setExporting(false);
+              }
+            }}
+          >
+            {exporting ? "Exporting…" : "Export calendar (.ics)"}
+          </Button>
+          <p className="text-sm text-muted-foreground">
+            Import published events and your assignment deadlines into your
+            calendar app. This is a snapshot; download again after changes.
+            Imported copies stay in your calendar when a team event is
+            unpublished.
+          </p>
+        </div>
+      )}
       {!data && !error && <Notice>Loading calendar…</Notice>}
       {data && <MonthView events={data.events} />}
       {data && (
@@ -239,6 +284,7 @@ function Rsvp({
   user: User;
   done: () => void;
 }) {
+  const [now] = useState(() => Date.now());
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   return (
@@ -249,7 +295,7 @@ function Rsvp({
           aria-label={`RSVP for ${event.title}`}
           className="form-select"
           value={event.response || ""}
-          disabled={busy || Date.parse(event.startsAt) <= Date.now()}
+          disabled={busy || Date.parse(event.startsAt) <= now}
           onChange={async (e) => {
             const response = e.target.value;
             setBusy(true);
@@ -319,6 +365,7 @@ function EventForm({
             e.preventDefault();
             if (busy) return;
             const form = new FormData(e.currentTarget);
+            const formElement = e.currentTarget;
             setBusy(true);
             setError("");
             try {
@@ -336,6 +383,7 @@ function EventForm({
                 published: form.get("published") === "on",
                 rsvpEnabled: form.get("rsvpEnabled") === "on",
               });
+              if (!event) formElement.reset();
               done();
             } catch (failure) {
               setError(

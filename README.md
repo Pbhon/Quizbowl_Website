@@ -621,3 +621,47 @@ assignment/practice/team scripts, `node --test tests/deck-permissions.test.mjs`,
 the task10-high/teacher-decks/assignments/deck-sharing browser specs with emulators.
 No rules deployment is needed: existing deployed rules already deny direct client
 writes to decks, sharing pointers, assignment bindings, progress and credit receipts.
+
+## Team calendar and announcements (Task 11)
+
+`/calendar` provides a responsive month view and event details for the configured
+school. Verified school administrators create and edit events and announcements,
+save drafts, publish or unpublish them, and choose competition/tournament,
+team practice, or other event types. Events include start/end times, locations,
+descriptions and optional RSVPs. Dates are entered and displayed in the viewer's
+local timezone and saved as UTC instants. Schedule separate events for each practice.
+
+Current members and verified school staff can read published events and
+announcements. Drafts and RSVP rosters are visible only to verified school admins;
+students can read and change only their own RSVP. Going, maybe and cannot attend
+responses can be changed or cleared until the event starts. Disabling RSVPs or
+unpublishing an event closes responses. Admin rosters omit former members.
+Published assignment deadlines are read directly from current assignments and
+respect each student's audience; editing or clearing a deadline updates the next
+calendar refresh. Admins see all published assignment deadlines. Dashboard previews
+show upcoming published events and announcements; use Refresh or reload to see updates.
+
+`GET /api/calendar` reads the workspace and `POST /api/calendar` handles admin
+create/update and self-only RSVP actions. Every request verifies the authenticated
+account and current Firebase email verification. School membership and admin roles
+are checked in the same Firestore transaction as the reads or writes. Caller-supplied
+school IDs and user IDs do not select data. Records live under
+`teams/{schoolId}/events/{id}`, `events/{id}/rsvps/{uid}`, and
+`teams/{schoolId}/announcements/{id}`. Existing deployed rules deny all direct client
+access to these collections; no rules or indexes need deployment for this feature.
+
+**Export calendar (.ics)** downloads published events and authorized assignment
+deadlines after checking current access again. Import the file into a calendar app.
+This is a snapshot export, with stable school/event identifiers, rather than an
+automatic subscription. Download again after updates; handling repeated imports
+depends on the calendar app. Unpublishing an event does not remove imported copies.
+Drafts, announcements, RSVP responses and member identities are excluded. Formatting
+follows [RFC 5545](https://www.rfc-editor.org/rfc/rfc5545), including UTC times,
+escaped text and UTF-8-safe line folding.
+
+Run `pnpm test:calendar` for validation, authorization, assignment audience, RSVP
+privacy/idempotency, API and export tests. `pnpm test:rules` includes direct-access
+denial coverage. With Auth and Firestore emulators running, set `E2E_FIREBASE=true`
+and run `pnpm test:e2e tests/e2e/calendar.spec.ts` for desktop/mobile authoring,
+editing, student visibility, RSVPs, announcements, deadlines, dashboards, export,
+revocation and responsive layout checks. The test suite uses only the demo project.

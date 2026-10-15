@@ -6,7 +6,11 @@ import {
 } from "firebase-admin/firestore";
 import { deckText } from "./decks";
 import { documentId } from "./history";
-import { calendarDate, assignmentDeadline } from "@/lib/calendar";
+import {
+  calendarDate,
+  calendarTimestamp,
+  assignmentDeadline,
+} from "@/lib/calendar";
 import { siteTeam } from "./site-team";
 import { PracticeError } from "./practice-persistence";
 import type {
@@ -42,7 +46,10 @@ export async function saveCalendar(
   if (body.action === "rsvp") return saveRsvp(db, uid, verified, body);
   if (body.kind === "announcement")
     return saveAnnouncement(db, uid, verified, body);
-  if (!["create", "update"].includes(String(body.action)))
+  if (
+    typeof body.action !== "string" ||
+    !["create", "update"].includes(body.action)
+  )
     throw new PracticeError("Unknown calendar action.", 400);
   if (typeof body.published !== "boolean")
     throw new PracticeError("Choose draft or published.", 400);
@@ -51,13 +58,17 @@ export async function saveCalendar(
     throw new PracticeError("Choose an RSVP setting.", 400);
   try {
     startsAt = calendarDate(body.startsAt);
-    endsAt = body.endsAt ? calendarDate(body.endsAt) : null;
+    endsAt =
+      body.endsAt == null || body.endsAt === ""
+        ? null
+        : calendarDate(body.endsAt);
   } catch {
     throw new PracticeError("Enter a valid date and time.", 400);
   }
   if (endsAt && endsAt <= startsAt)
     throw new PracticeError("End time must follow start time.", 400);
   if (
+    typeof (body.type ?? "event") !== "string" ||
     !["event", "competition", "practice"].includes(String(body.type ?? "event"))
   )
     throw new PracticeError("Choose a valid event type.", 400);
@@ -107,7 +118,31 @@ export async function calendarWorkspace(
     const records = await tx.get(db.collection(`teams/${teamId}/events`));
     const events = records.docs
       .filter((doc) => isAdmin || doc.data().published === true)
-      .map((doc) => ({ ...doc.data(), id: doc.id }) as CalendarEvent);
+      .flatMap((doc): CalendarEvent[] => {
+        const data = doc.data();
+        try {
+          return [
+            {
+              id: doc.id,
+              title: String(data.title || "Team event"),
+              description: String(data.description || ""),
+              location: String(data.location || ""),
+              type:
+                data.type === "competition"
+                  ? "competition"
+                  : data.type === "practice"
+                    ? "practice"
+                    : "event",
+              startsAt: calendarTimestamp(data.startsAt),
+              endsAt: data.endsAt ? calendarTimestamp(data.endsAt) : null,
+              published: data.published === true,
+              rsvpEnabled: data.rsvpEnabled === true,
+            },
+          ];
+        } catch {
+          return [];
+        }
+      });
     const assignments = await tx.get(
       db.collection(`teams/${teamId}/assignments`),
     );

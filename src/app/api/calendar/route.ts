@@ -4,16 +4,28 @@ import {
 } from "@/lib/server/practice-persistence";
 import { getFirebaseAdmin } from "@/lib/firebase/admin";
 import { calendarWorkspace, saveCalendar } from "@/lib/server/calendar";
+import { calendarICS } from "@/lib/server/calendar-export";
+import { siteTeam } from "@/lib/server/site-team";
 export const runtime = "nodejs";
 const headers = { "Cache-Control": "private, no-store", Vary: "Authorization" };
 export async function GET(request: Request) {
   try {
     const account = (await authenticatePractice(request))!;
     const user = await getFirebaseAdmin().auth.getUser(account.uid);
-    return Response.json(
-      await calendarWorkspace(account.db, account.uid, user.emailVerified),
-      { headers },
+    const data = await calendarWorkspace(
+      account.db,
+      account.uid,
+      user.emailVerified,
     );
+    if (new URL(request.url).searchParams.get("format") === "ics")
+      return new Response(calendarICS(data.events, siteTeam().id), {
+        headers: {
+          ...headers,
+          "Content-Type": "text/calendar; charset=utf-8",
+          "Content-Disposition": 'attachment; filename="quizbowl-team.ics"',
+        },
+      });
+    return Response.json(data, { headers });
   } catch (error) {
     return Response.json(
       {

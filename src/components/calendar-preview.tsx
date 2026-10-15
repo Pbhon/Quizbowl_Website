@@ -12,6 +12,7 @@ export function CalendarPreview({
   user: User;
   announcementsOnly?: boolean;
 }) {
+  const [now] = useState(() => Date.now());
   const [data, setData] = useState<CalendarWorkspace | null>(null),
     [error, setError] = useState("");
   useEffect(() => {
@@ -26,9 +27,7 @@ export function CalendarPreview({
     return () => controller.abort();
   }, [user]);
   const events = data?.events
-    .filter(
-      (event) => event.published && Date.parse(event.startsAt) >= Date.now(),
-    )
+    .filter((event) => event.published && Date.parse(event.startsAt) >= now)
     .slice(0, 5);
   return (
     <section className="space-y-3 rounded-xl border bg-card p-5">

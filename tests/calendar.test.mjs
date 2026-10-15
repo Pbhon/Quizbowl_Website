@@ -3,6 +3,7 @@ import vm from "node:vm";
 import test from "node:test";
 import assert from "node:assert/strict";
 import ts from "typescript";
+import { createHash } from "node:crypto";
 class PracticeError extends Error {
   constructor(message, status) {
     super(message);
@@ -28,6 +29,10 @@ function load(path, imports = {}) {
       Date,
       Set,
       TextEncoder,
+      Buffer,
+      Request,
+      Response,
+      URL,
     },
   );
   return mod.exports;
@@ -59,6 +64,37 @@ const server = load("src/lib/server/calendar.ts", {
       return value;
     },
   },
+});
+test("calendar export escapes injection, folds Unicode, scopes stable IDs, and excludes drafts", () => {
+  const { calendarICS } = load("src/lib/server/calendar-export.ts", {
+    "server-only": {},
+    "node:crypto": { createHash },
+    "@/lib/calendar": helpers,
+  });
+  const event = {
+    id: "one",
+    title: "Quiz, tournament; " + "🏆".repeat(40),
+    description: "line\r\nBEGIN:VEVENT\\escape",
+    location: "School",
+    startsAt: "2026-11-01T12:00:00.000Z",
+    endsAt: "2026-11-01T13:00:00.000Z",
+    published: true,
+  };
+  const output = calendarICS(
+    [event, { ...event, id: "draft", published: false }],
+    "school",
+    new Date("2026-10-01T00:00:00.000Z"),
+  );
+  const unfolded = output.replace(/\r\n /g, "");
+  assert.equal(unfolded.match(/\r\nBEGIN:VEVENT\r\n/g).length, 1);
+  assert.ok(unfolded.includes("SUMMARY:Quiz\\, tournament\\; "));
+  assert.ok(unfolded.includes("DESCRIPTION:line\\nBEGIN:VEVENT\\\\escape"));
+  assert.ok(unfolded.includes("DTSTART:20261101T120000Z"));
+  for (const line of output.split("\r\n"))
+    assert.ok(Buffer.byteLength(line) <= 75);
+  const uid = (value) => value.match(/UID:(.*)/)[1];
+  assert.equal(uid(output), uid(calendarICS([event], "school")));
+  assert.notEqual(uid(output), uid(calendarICS([event], "other")));
 });
 function database() {
   const records = new Map([
@@ -137,6 +173,20 @@ test("school calendar hides drafts and isolates outsiders", async () => {
       server.calendarWorkspace(db, uid, false),
       (e) => e.status === 403,
     );
+});
+test("legacy event timestamps normalize without exposing internal fields", async () => {
+  const { db, records } = database();
+  records.set("teams/school/events/live", {
+    title: "Legacy",
+    published: true,
+    startsAt: { toDate: () => new Date("2026-11-01T12:00:00.000Z") },
+    createdBy: "private",
+    responses: [{ uid: "private" }],
+  });
+  const event = (await server.calendarWorkspace(db, "student", true)).events[0];
+  assert.equal(event.startsAt, "2026-11-01T12:00:00.000Z");
+  assert.equal(event.createdBy, undefined);
+  assert.equal(event.responses, undefined);
 });
 const base = {
   action: "create",
@@ -340,5 +390,63 @@ test("announcements use admin authoring and published school-only reads", async 
   await assert.rejects(
     server.saveCalendar(db, "admin", true, body),
     (e) => e.status === 403,
+  );
+});
+test("calendar API uses authenticated identity, current verification and private exports", async () => {
+  const seen = [];
+  const { GET, POST } = load("src/app/api/calendar/route.ts", {
+    "@/lib/server/practice-persistence": {
+      PracticeError,
+      authenticatePractice: async () => ({ uid: "student", db: {} }),
+    },
+    "@/lib/firebase/admin": {
+      getFirebaseAdmin: () => ({
+        auth: { getUser: async () => ({ emailVerified: false }) },
+      }),
+    },
+    "@/lib/server/calendar": {
+      calendarWorkspace: async (_db, uid, verified) => {
+        seen.push({ uid, verified });
+        return { events: [] };
+      },
+      saveCalendar: async () => ({ saved: true }),
+    },
+    "@/lib/server/calendar-export": {
+      calendarICS: () => "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n",
+    },
+    "@/lib/server/site-team": { siteTeam: () => ({ id: "school" }) },
+  });
+  const response = await GET(
+    new Request(
+      "http://localhost/api/calendar?format=ics&uid=admin&teamId=other",
+    ),
+  );
+  assert.equal(seen[0].uid, "student");
+  assert.equal(seen[0].verified, false);
+  assert.equal(response.headers.get("cache-control"), "private, no-store");
+  assert.equal(response.headers.get("vary"), "Authorization");
+  assert.match(response.headers.get("content-type"), /^text\/calendar/);
+  for (const body of ["null", "[]", "invalid"])
+    assert.equal(
+      (
+        await POST(
+          new Request("http://localhost/api/calendar", {
+            method: "POST",
+            body,
+          }),
+        )
+      ).status,
+      400,
+    );
+  assert.equal(
+    (
+      await POST(
+        new Request("http://localhost/api/calendar", {
+          method: "POST",
+          body: " ".repeat(12001),
+        }),
+      )
+    ).status,
+    413,
   );
 });

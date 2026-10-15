@@ -33,6 +33,18 @@ export function calendarDate(value: unknown): string {
     throw new Error("Enter a valid date and time.");
   return value;
 }
+export function calendarTimestamp(value: unknown): string {
+  if (
+    value &&
+    typeof value === "object" &&
+    "toDate" in value &&
+    typeof value.toDate === "function"
+  )
+    return calendarDate(value.toDate().toISOString());
+  return calendarDate(
+    typeof value === "string" ? value.replace(/(?<=:\d{2})Z$/, ".000Z") : value,
+  );
+}
 export function assignmentDeadline(
   id: string,
   data: Record<string, unknown>,
@@ -52,15 +64,7 @@ export function assignmentDeadline(
     return null;
   let startsAt: string;
   try {
-    const value = data.dueAt;
-    startsAt = calendarDate(
-      typeof value === "object" &&
-        value &&
-        "toDate" in value &&
-        typeof value.toDate === "function"
-        ? value.toDate().toISOString()
-        : value,
-    );
+    startsAt = calendarTimestamp(data.dueAt);
   } catch {
     return null;
   }

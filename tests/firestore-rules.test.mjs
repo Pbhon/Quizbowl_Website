@@ -109,10 +109,12 @@ test("malformed profiles and forged timestamps are denied", async () => {
   await setDoc(ref, profile());
   await assertFails(
     updateDoc(ref, {
-      createdAt: serverTimestamp(),
+      // A fixed different instant avoids same-tick emulator timestamps.
+      createdAt: new Date(0),
       updatedAt: serverTimestamp(),
     }),
   );
+  await assertFails(updateDoc(ref, { updatedAt: new Date(0) }));
 });
 test("collection listing, deletes, and unimplemented collections are denied", async () => {
   const db = ownerDb();

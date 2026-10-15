@@ -71,7 +71,7 @@ logged-in account; switching accounts clears the previous dashboard. Question
 counts deduplicate bonus parts within each session, while correct/incorrect and
 accuracy use individual responses (matching task 3). Activity follows the
 student's timezone. Upcoming items are filtered by school membership, publication,
-date, and student/team audience. Assignment authoring is complete in Task 10; calendar authoring remains Task 11.
+date, and student/team audience. Assignment authoring is complete in Task 10; calendar authoring is complete in Task 11.
 
 ## 5. Question History
 - [x] **[Low]** Display the 30 most recent question attempts
@@ -238,7 +238,16 @@ formatting, typecheck and a fresh production build pass. See README.md for detai
 - [x] **[Medium]** Support optional event RSVPs
 - [x] **[Low]** Display upcoming events on dashboards
 - [x] **[Low]** Create team announcements
-- [ ] **[Medium]** Add optional calendar export or synchronization
+- [x] **[Medium]** Add optional calendar export or synchronization
+
+All eleven Task 11 subtasks are complete at `/calendar`. School admins can create,
+edit, publish and unpublish events and announcements. Students see published events,
+current assignment deadlines, local times, locations and optional private RSVPs.
+Student and team dashboards show upcoming events and announcements. Calendar export
+downloads an access-checked .ics snapshot with stable event identifiers; it is not
+an automatic subscription. Transactions enforce school membership and current admin
+roles. Unit, rules, desktop/mobile browser tests, lint, formatting, typecheck and a
+fresh production build pass. See README.md for access and export behavior.
 
 ## 12. Firebase Database & Backend
 - [ ] **[Medium]** Create user profile collections
@@ -286,13 +295,3 @@ formatting, typecheck and a fresh production build pass. See README.md for detai
 - [ ] **[Medium]** AI explanations for difficult clues
 - [ ] **[High]** Anki review progress synchronization
 - [ ] **[High]** Optional support for multiple school teams
-
-
-
-
-
-
-
-
-
-
