@@ -414,3 +414,31 @@ test("teacher provenance, shared sources, assignment bindings and credit receipt
     }
   }
 });
+test("calendar events, RSVPs and announcements require the authenticated server", async () => {
+  await seedStaff("admin", "admin", "team-a");
+  await seedMember();
+  const paths = [
+    "teams/team-a/events/e",
+    "teams/team-a/events/e/rsvps/student-one",
+    "teams/team-a/announcements/a",
+  ];
+  await env.withSecurityRulesDisabled(async (context) => {
+    for (const path of paths)
+      await setDoc(doc(context.firestore(), path), {
+        title: "Private school data",
+        published: true,
+      });
+  });
+  for (const client of [
+    verifiedDb(),
+    verifiedDb("admin"),
+    verifiedDb("outsider"),
+    env.unauthenticatedContext().firestore(),
+  ]) {
+    for (const path of paths) {
+      await assertFails(getDoc(doc(client, path)));
+      await assertFails(setDoc(doc(client, path), { published: true }));
+      await assertFails(deleteDoc(doc(client, path)));
+    }
+  }
+});

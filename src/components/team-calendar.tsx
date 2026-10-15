@@ -79,6 +79,7 @@ function Calendar({ user }: { user: User }) {
       </Button>
       {error && <Notice error>{error}</Notice>}
       {!data && !error && <Notice>Loading calendar…</Notice>}
+      {data && <MonthView events={data.events} />}
       {data?.isAdmin && (
         <EventForm
           key={editing?.id || "new"}
@@ -97,7 +98,7 @@ function Calendar({ user }: { user: User }) {
       )}
       {data && !data.events.length && <Notice>No team events yet.</Notice>}
       {data?.events.map((event) => (
-        <Card key={event.id}>
+        <Card key={event.id} id={`calendar-${event.id}`}>
           <CardContent className="space-y-3 pt-6">
             <h2 className="text-lg font-semibold">{event.title}</h2>
             {event.location && <p>Location: {event.location}</p>}
@@ -127,6 +128,89 @@ function Calendar({ user }: { user: User }) {
         </Card>
       ))}
     </div>
+  );
+}
+
+function MonthView({ events }: { events: CalendarEvent[] }) {
+  const [month, setMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const days = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+  const offset = month.getDay();
+  return (
+    <section
+      aria-label="Monthly calendar"
+      className="space-y-3 rounded-xl border bg-card p-3 sm:p-5"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Button
+          variant="outline"
+          onClick={() =>
+            setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))
+          }
+        >
+          Previous month
+        </Button>
+        <h2 aria-live="polite" className="font-semibold">
+          {month.toLocaleDateString(undefined, {
+            month: "long",
+            year: "numeric",
+          })}
+        </h2>
+        <Button
+          variant="outline"
+          onClick={() =>
+            setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))
+          }
+        >
+          Next month
+        </Button>
+      </div>
+      <div className="grid grid-cols-7 text-center text-xs" aria-hidden>
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+          <div key={day} className="py-2">
+            {day}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {Array.from({ length: offset + days }, (_, index) => {
+          const day = index - offset + 1;
+          if (day < 1) return <div key={index} />;
+          const date = new Date(month.getFullYear(), month.getMonth(), day);
+          const items = events.filter(
+            (event) =>
+              new Date(event.startsAt).toDateString() === date.toDateString(),
+          );
+          return (
+            <div
+              key={index}
+              className="min-h-20 min-w-0 rounded border p-1 text-xs sm:p-2"
+            >
+              <time
+                dateTime={`${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`}
+              >
+                {day}
+              </time>
+              {items.map((event) => (
+                <a
+                  key={event.id}
+                  href={`#calendar-${event.id}`}
+                  title={event.title}
+                  className="mt-1 block truncate rounded bg-accent p-1 text-primary"
+                >
+                  {event.title}
+                </a>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Choose an event to read its details below. Refresh to see team updates.
+      </p>
+    </section>
   );
 }
 
