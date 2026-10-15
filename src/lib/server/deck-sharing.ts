@@ -95,5 +95,18 @@ export async function readableShare(
     deck.data()!.teamId !== teamId
   )
     throw new PracticeError("Shared deck is unavailable.", 404);
+  if (deck.data()!.curatedBy) {
+    const [staff, owner] = await tx.getAll(
+      db.doc(`staff/${ownerUid}`),
+      db.doc(`teams/${teamId}/members/${ownerUid}`),
+    );
+    if (
+      deck.data()!.curatedBy !== ownerUid ||
+      !owner.exists ||
+      staff.data()?.teamId !== teamId ||
+      !["teacher", "admin"].includes(staff.data()?.role)
+    )
+      throw new PracticeError("Shared teacher deck is unavailable.", 404);
+  }
   return deck;
 }

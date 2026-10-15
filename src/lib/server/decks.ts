@@ -296,6 +296,30 @@ export async function mutateDeck(
   return db.runTransaction(async (tx) => {
     const deck = await tx.get(ref);
     if (!deck.exists) throw new PracticeError("Study deck not found.", 404);
+    if (body.action === "shareTeacher") {
+      const staff = (await tx.get(db.doc(`staff/${uid}`))).data();
+      if (
+        deck.data()!.curatedBy !== uid ||
+        !staff ||
+        staff.teamId !== siteTeam().id ||
+        !["teacher", "admin"].includes(staff.role)
+      )
+        throw new PracticeError(
+          "Only the current staff creator can share this teacher deck.",
+          403,
+        );
+      const audience = await audienceFields(
+        db,
+        tx,
+        uid,
+        ref.id,
+        body.visibility,
+        deck.data()!,
+      );
+      tx.update(ref, { ...audience, updatedAt: stamp() });
+      writeAudience(db, tx, uid, ref.id, audience, deck.data()!);
+      return { deckId: ref.id };
+    }
     if (body.action === "update") {
       const audience = await audienceFields(
         db,

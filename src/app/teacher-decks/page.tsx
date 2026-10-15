@@ -5,7 +5,7 @@ export default function TeacherDecksPage() {
     <div className="space-y-6">
       <PageHeading
         title="Teacher-curated decks"
-        description="Create private collections of original questions, organize topic tags, and edit study notes. Add questions from practice or history."
+        description="Curate original questions and study notes. Share decks with your school's students or keep them private."
       />
       <StudyDecks teacherCurated />
     </div>

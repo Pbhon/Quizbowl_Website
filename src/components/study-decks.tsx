@@ -257,10 +257,10 @@ function DeckWorkspace({
     return () => controller.abort();
   }, [user, revision]);
   const refresh = () => setRevision((n) => n + 1);
-  const visibleDecks = decks?.filter(
-    (deck) =>
-      deck.visibility === visibility &&
-      (!teacherCurated || (deck.teacherCurated && deck.canEdit)),
+  const visibleDecks = decks?.filter((deck) =>
+    teacherCurated
+      ? deck.teacherCurated && deck.canEdit
+      : deck.visibility === visibility,
   );
   return (
     <div className="space-y-6">
@@ -277,23 +277,25 @@ function DeckWorkspace({
           Refresh decks
         </Button>
       </div>
-      <FormField
-        id="deck-list-visibility"
-        label="Show decks"
-        hint="Public decks are shared with your team."
-      >
-        <select
+      {!teacherCurated && (
+        <FormField
           id="deck-list-visibility"
-          className="form-select"
-          value={visibility}
-          onChange={(event) =>
-            setVisibility(event.target.value as StudyDeck["visibility"])
-          }
+          label="Show decks"
+          hint="Public decks are shared with your team."
         >
-          <option value="private">Private decks</option>
-          <option value="team">Public decks</option>
-        </select>
-      </FormField>
+          <select
+            id="deck-list-visibility"
+            className="form-select"
+            value={visibility}
+            onChange={(event) =>
+              setVisibility(event.target.value as StudyDeck["visibility"])
+            }
+          >
+            <option value="private">Private decks</option>
+            <option value="team">Public decks</option>
+          </select>
+        </FormField>
+      )}
       <FormField
         id="search-cards"
         label="Search saved cards"
@@ -440,13 +442,11 @@ function CreateDeck({
         <h2 className="text-xl font-semibold">Create a study deck</h2>
         <form onSubmit={create} className="space-y-4">
           <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-2">
-            {!teacherCurated && (
-              <VisibilityField
-                id="create-visibility"
-                value={visibility}
-                onChange={setVisibility}
-              />
-            )}
+            <VisibilityField
+              id="create-visibility"
+              value={visibility}
+              onChange={setVisibility}
+            />
             <FormField id="create-name" label="Deck name">
               <Input
                 id="create-name"
@@ -561,6 +561,23 @@ function DeckPanel({
       setBusy(false);
     }
   }
+  async function shareTeacher() {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await deckRequest(user, {
+        action: "shareTeacher",
+        deckId: deck.id,
+        visibility: deck.visibility === "team" ? "private" : "team",
+      });
+      refresh();
+    } catch (failure) {
+      setError(message(failure));
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <Card className="gap-0 py-0">
       <details className="group/deck">
@@ -574,6 +591,7 @@ function DeckPanel({
           />
         </summary>
         <CardContent className="space-y-4 pb-6">
+          {deck.teacherCurated && <p className="badge">Teacher-curated</p>}
           <p className="text-sm text-muted-foreground">
             {deck.visibility === "team"
               ? `Shared with ${deck.teamName}`
@@ -599,6 +617,19 @@ function DeckPanel({
             {deck.canEdit && (
               <Button variant="outline" onClick={() => setEditing(!editing)}>
                 Edit deck
+              </Button>
+            )}
+            {deck.teacherCurated && deck.canEdit && (
+              <Button
+                variant="outline"
+                disabled={busy}
+                onClick={() => void shareTeacher()}
+              >
+                {busy
+                  ? "Saving…"
+                  : deck.visibility === "team"
+                    ? "Stop sharing with students"
+                    : "Share with students"}
               </Button>
             )}
             {deck.sharedId && (

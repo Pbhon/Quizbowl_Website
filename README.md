@@ -594,9 +594,14 @@ Missing progress is not started; absent/malformed performance is unknown. Team a
 student dashboards read the same completion contract.
 
 Teachers curate original question collections, tags and notes at `/teacher-decks`.
-Teacher sharing and teacher-specific edit protections are the remaining Task 10
-High subtasks. Students can already study, copy, practice and export existing school
-shares via `/decks`. Shared-reader sessions retain original question snapshots;
+Use **Share with students** or **Stop sharing with students** to manage school
+access; sharing can also be chosen during creation. Only verified current staff
+creators can change teacher sharing. Revocation removes the directory pointer
+atomically. Student shared reads, copies, practice and APKG exports check live
+visibility, membership, and the creator's current school staff/membership records.
+Teacher-specific edit protections remain the final Task 10 High subtask. Students
+study, copy, practice and export school shares via `/decks`. Shared-reader sessions
+retain original question snapshots;
 CSV exports use cards already loaded in the browser.
 
 Unit tests cover targeting, filters, requirement versions, transaction retries,

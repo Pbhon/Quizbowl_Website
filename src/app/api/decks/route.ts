@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     const body = JSON.parse(text);
     if (!body || typeof body !== "object" || Array.isArray(body))
       throw new PracticeError("Invalid request.", 400);
-    if (body.teacherCurated === true) {
+    if (body.teacherCurated === true || body.action === "shareTeacher") {
       const user = await getFirebaseAdmin().auth.getUser(account.uid);
       await requireTeamStaff(account.db, account.uid, user.emailVerified);
     }

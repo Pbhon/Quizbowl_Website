@@ -210,7 +210,7 @@ counting rules.
 - [x] **[High]** Automatically track assignment progress
 - [x] **[Low]** View student completion and performance
 - [x] **[Medium]** Create teacher-curated study decks
-- [ ] **[High]** Share teacher decks with students
+- [x] **[High]** Share teacher decks with students
 - [x] **[Medium]** Allow students to practice and export shared decks
 - [ ] **[High]** Prevent unauthorized edits to teacher-created decks
 
@@ -219,7 +219,7 @@ Students start assignment-bound sessions from `/assignments`; requirements are
 checked server-side and progress updates atomically with final responses. Bonuses
 count once after all parts; retries and repeated source questions cannot add credit.
 Requirement changes start a new progress version. Ordinary practice is not credited.
-Teacher sharing and teacher-specific edit protections remain the two High subtasks.
+Teacher-curated decks can be shared with school students and revoked. Teacher-specific edit protections remain the final High subtask.
 See README.md for the progress/version contract and validation.
 
 ## 11. Team Calendar & Announcements
