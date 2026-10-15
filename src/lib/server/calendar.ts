@@ -35,11 +35,14 @@ export async function saveCalendar(
   verified: boolean,
   body: Record<string, unknown>,
 ) {
+  if (body.action === "rsvp") return saveRsvp(db, uid, verified, body);
   if (!["create", "update"].includes(String(body.action)))
     throw new PracticeError("Unknown calendar action.", 400);
   if (typeof body.published !== "boolean")
     throw new PracticeError("Choose draft or published.", 400);
   let startsAt: string, endsAt: string | null;
+  if (body.rsvpEnabled !== undefined && typeof body.rsvpEnabled !== "boolean")
+    throw new PracticeError("Choose an RSVP setting.", 400);
   try {
     startsAt = calendarDate(body.startsAt);
     endsAt = body.endsAt ? calendarDate(body.endsAt) : null;
@@ -61,7 +64,7 @@ export async function saveCalendar(
     endsAt,
     published: body.published,
     audience: "team",
-    rsvpEnabled: false,
+    rsvpEnabled: body.rsvpEnabled ?? false,
     updatedAt: FieldValue.serverTimestamp(),
   };
   return db.runTransaction(async (tx) => {
@@ -106,10 +109,66 @@ export async function calendarWorkspace(
       const deadline = assignmentDeadline(doc.id, doc.data(), uid, isAdmin);
       if (deadline) events.push(deadline);
     }
+    for (const event of events.filter(
+      (event) => event.type !== "assignment" && event.rsvpEnabled,
+    )) {
+      const path = `teams/${teamId}/events/${event.id}/rsvps`;
+      event.response =
+        (await tx.get(db.doc(`${path}/${uid}`))).data()?.response || "";
+      if (isAdmin) {
+        const responses = await tx.get(db.collection(path));
+        event.responses = [];
+        for (const response of responses.docs) {
+          const member = await tx.get(
+            db.doc(`teams/${teamId}/members/${response.id}`),
+          );
+          if (member.exists)
+            event.responses.push({
+              uid: response.id,
+              name: String(member.data()?.displayName || "Team member"),
+              response: response.data().response,
+            });
+        }
+      }
+    }
     return {
       isAdmin,
       events: events.sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
       announcements: [],
     };
+  });
+}
+
+async function saveRsvp(
+  db: Firestore,
+  uid: string,
+  verified: boolean,
+  body: Record<string, unknown>,
+) {
+  if (
+    !["going", "maybe", "declined", ""].includes(String(body.response)) ||
+    typeof body.response !== "string"
+  )
+    throw new PracticeError("Choose a valid RSVP.", 400);
+  return db.runTransaction(async (tx) => {
+    const { teamId } = await calendarAccess(db, tx, uid, verified);
+    const eventRef = db.doc(`teams/${teamId}/events/${documentId(body.id)}`);
+    const event = (await tx.get(eventRef)).data();
+    if (
+      !event ||
+      event.published !== true ||
+      event.rsvpEnabled !== true ||
+      !Number.isFinite(Date.parse(event.startsAt)) ||
+      Date.parse(event.startsAt) <= Date.now()
+    )
+      throw new PracticeError("RSVPs are closed for this event.", 409);
+    const ref = db.doc(`${eventRef.path}/rsvps/${uid}`);
+    if (body.response === "") tx.delete(ref);
+    else
+      tx.set(ref, {
+        response: body.response,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    return { saved: true };
   });
 }

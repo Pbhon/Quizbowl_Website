@@ -207,6 +207,68 @@ test("deadlines follow current assignment publication, audience and due date", a
     "2026-12-01T12:00:00.000Z",
   );
 });
+test("RSVPs are idempotent, scoped to self and closed on unpublish or disable", async () => {
+  const { db, records } = database();
+  const path = "teams/school/events/live";
+  records.set(path, {
+    ...records.get(path),
+    rsvpEnabled: true,
+    startsAt: "2099-01-01T00:00:00.000Z",
+  });
+  for (const response of ["going", "going", "maybe"])
+    await server.saveCalendar(db, "student", true, {
+      action: "rsvp",
+      id: "live",
+      response,
+      uid: "victim",
+    });
+  assert.equal(records.get(`${path}/rsvps/student`).response, "maybe");
+  assert.equal(records.has(`${path}/rsvps/victim`), false);
+  assert.equal(
+    (await server.calendarWorkspace(db, "student", true)).events.find(
+      (e) => e.id === "live",
+    ).responses,
+    undefined,
+  );
+  assert.equal(
+    (await server.calendarWorkspace(db, "admin", true)).events.find(
+      (e) => e.id === "live",
+    ).responses.length,
+    1,
+  );
+  await server.saveCalendar(db, "student", true, {
+    action: "rsvp",
+    id: "live",
+    response: "",
+  });
+  assert.equal(records.has(`${path}/rsvps/student`), false);
+  for (const change of [
+    { published: false },
+    { rsvpEnabled: false },
+    { startsAt: "2000-01-01T00:00:00.000Z" },
+  ]) {
+    const original = records.get(path);
+    records.set(path, { ...original, ...change });
+    await assert.rejects(
+      server.saveCalendar(db, "student", true, {
+        action: "rsvp",
+        id: "live",
+        response: "going",
+      }),
+      (e) => e.status === 409,
+    );
+    records.set(path, original);
+  }
+  records.delete("teams/school/members/student");
+  await assert.rejects(
+    server.saveCalendar(db, "student", true, {
+      action: "rsvp",
+      id: "live",
+      response: "going",
+    }),
+    (e) => e.status === 403,
+  );
+});
 test("only current verified school admins create or edit events", async () => {
   const { db, records } = database();
   for (const [uid, verified] of [

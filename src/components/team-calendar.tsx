@@ -101,6 +101,14 @@ function Calendar({ user }: { user: User }) {
         <Card key={event.id} id={`calendar-${event.id}`}>
           <CardContent className="space-y-3 pt-6">
             <h2 className="text-lg font-semibold">{event.title}</h2>
+            {event.rsvpEnabled && event.published && (
+              <Rsvp
+                key={`${event.id}:${event.response}`}
+                event={event}
+                user={user}
+                done={() => setRevision((n) => n + 1)}
+              />
+            )}
             {event.location && <p>Location: {event.location}</p>}
             {event.description && (
               <p className="whitespace-pre-wrap break-words">
@@ -214,6 +222,68 @@ function MonthView({ events }: { events: CalendarEvent[] }) {
   );
 }
 
+function Rsvp({
+  event,
+  user,
+  done,
+}: {
+  event: CalendarEvent;
+  user: User;
+  done: () => void;
+}) {
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  return (
+    <div className="space-y-2">
+      <label className="block space-y-1">
+        <span>Your RSVP (optional)</span>
+        <select
+          aria-label={`RSVP for ${event.title}`}
+          className="form-select"
+          value={event.response || ""}
+          disabled={busy || Date.parse(event.startsAt) <= Date.now()}
+          onChange={async (e) => {
+            const response = e.target.value;
+            setBusy(true);
+            setError("");
+            try {
+              await calendarRequest(user, {
+                action: "rsvp",
+                id: event.id,
+                response,
+              });
+              done();
+            } catch (failure) {
+              setError(
+                failure instanceof Error ? failure.message : "Please retry.",
+              );
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <option value="">No response</option>
+          <option value="going">Going</option>
+          <option value="maybe">Maybe</option>
+          <option value="declined">Cannot attend</option>
+        </select>
+      </label>
+      {error && <Notice error>{error}</Notice>}
+      {event.responses && (
+        <details>
+          <summary>Team RSVPs ({event.responses.length})</summary>
+          <ul>
+            {event.responses.map((response) => (
+              <li key={response.uid}>
+                {response.name}: {response.response}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
+}
 function localDate(value?: string | null) {
   if (!value) return "";
   const date = new Date(value);
@@ -256,6 +326,7 @@ function EventForm({
                   ? new Date(String(form.get("endsAt"))).toISOString()
                   : null,
                 published: form.get("published") === "on",
+                rsvpEnabled: form.get("rsvpEnabled") === "on",
               });
               done();
             } catch (failure) {
@@ -335,6 +406,14 @@ function EventForm({
               Publish event
             </label>
             <Button type="submit">{busy ? "Saving…" : "Save event"}</Button>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="rsvpEnabled"
+                defaultChecked={event?.rsvpEnabled}
+              />
+              Allow optional RSVPs
+            </label>
           </fieldset>
           {error && <Notice error>{error}</Notice>}
         </form>
