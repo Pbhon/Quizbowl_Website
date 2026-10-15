@@ -138,3 +138,42 @@ test("school calendar hides drafts and isolates outsiders", async () => {
       (e) => e.status === 403,
     );
 });
+const base = {
+  action: "create",
+  title: "Event",
+  startsAt: "2026-11-01T12:00:00.000Z",
+  published: true,
+};
+test("only current verified school admins create or edit events", async () => {
+  const { db, records } = database();
+  for (const [uid, verified] of [
+    ["student", true],
+    ["teacher", true],
+    ["foreign", true],
+    ["admin", false],
+  ])
+    await assert.rejects(
+      server.saveCalendar(db, uid, verified, base),
+      (e) => e.status === 403,
+    );
+  await server.saveCalendar(db, "admin", true, base);
+  assert.equal(records.get("teams/school/events/new").title, "Event");
+  await server.saveCalendar(db, "admin", true, {
+    ...base,
+    action: "update",
+    id: "new",
+    title: "Edited",
+  });
+  assert.equal(records.get("teams/school/events/new").title, "Edited");
+  for (const change of [
+    { startsAt: "2026-02-30T12:00:00.000Z" },
+    { endsAt: base.startsAt },
+    { published: "true" },
+    { title: "" },
+    { action: "update", id: "bad/path" },
+  ])
+    await assert.rejects(
+      server.saveCalendar(db, "admin", true, { ...base, ...change }),
+      (e) => e.status === 400,
+    );
+});

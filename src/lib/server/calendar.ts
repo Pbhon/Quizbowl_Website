@@ -1,5 +1,12 @@
 import "server-only";
-import type { Firestore, Transaction } from "firebase-admin/firestore";
+import {
+  FieldValue,
+  type Firestore,
+  type Transaction,
+} from "firebase-admin/firestore";
+import { deckText } from "./decks";
+import { documentId } from "./history";
+import { calendarDate } from "@/lib/calendar";
 import { siteTeam } from "./site-team";
 import { PracticeError } from "./practice-persistence";
 import type { CalendarEvent, CalendarWorkspace } from "@/lib/calendar";
@@ -20,6 +27,62 @@ export async function calendarAccess(
   if (!isStaff && !member.exists)
     throw new PracticeError("School membership required.", 403);
   return { teamId, isAdmin: Boolean(isStaff && staff?.role === "admin") };
+}
+
+export async function saveCalendar(
+  db: Firestore,
+  uid: string,
+  verified: boolean,
+  body: Record<string, unknown>,
+) {
+  if (!["create", "update"].includes(String(body.action)))
+    throw new PracticeError("Unknown calendar action.", 400);
+  if (typeof body.published !== "boolean")
+    throw new PracticeError("Choose draft or published.", 400);
+  let startsAt: string, endsAt: string | null;
+  try {
+    startsAt = calendarDate(body.startsAt);
+    endsAt = body.endsAt ? calendarDate(body.endsAt) : null;
+  } catch {
+    throw new PracticeError("Enter a valid date and time.", 400);
+  }
+  if (endsAt && endsAt <= startsAt)
+    throw new PracticeError("End time must follow start time.", 400);
+  const data = {
+    title: deckText(body.title, 120, true),
+    description: "",
+    location: "",
+    type: "event",
+    startsAt,
+    endsAt,
+    published: body.published,
+    audience: "team",
+    rsvpEnabled: false,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+  return db.runTransaction(async (tx) => {
+    const { teamId, isAdmin } = await calendarAccess(db, tx, uid, verified);
+    if (!isAdmin)
+      throw new PracticeError(
+        "Verified school administrator access required.",
+        403,
+      );
+    const ref =
+      body.action === "create"
+        ? db.collection(`teams/${teamId}/events`).doc()
+        : db.doc(`teams/${teamId}/events/${documentId(body.id)}`);
+    const existing = await tx.get(ref);
+    if (body.action === "update" && !existing.exists)
+      throw new PracticeError("Event not found.", 404);
+    if (body.action === "create")
+      tx.create(ref, {
+        ...data,
+        createdBy: uid,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    else tx.update(ref, data);
+    return { eventId: ref.id };
+  });
 }
 export async function calendarWorkspace(
   db: Firestore,
