@@ -6,8 +6,8 @@ student registration, staff login, role permissions, automatic school membership
 password recovery and changes, email verification, and account preferences.
 Practice, student statistics, and question history are implemented as described
 below. All of Task 6 deck management, including private and team-shared decks,
-is implemented. Assignments and calendar authoring remain later
-checklist phases.
+is implemented. Task 10 assignment authoring, automatic progress, and teacher deck
+sharing/edit protections are complete. Calendar authoring remains task 11.
 
 ## Run locally
 
@@ -300,15 +300,15 @@ another student's statistics. Existing Firestore rules keep client writes to the
 records denied; the dashboard needs no rule deployment.
 
 Upcoming records are read only after checking the student's membership in the
-configured school. The read contract for later assignment/calendar features is:
+configured school. The read contract for assignment/calendar features is:
 
 - `teams/{teamId}/assignments/{id}`: `title`, `dueAt` (Firestore timestamp or ISO
   timestamp), `published: true`, and either `audience: "team"` or `studentUids`.
 - `teams/{teamId}/events/{id}`: the same audience/publication fields plus
   `type: "competition"` and `startsAt` instead of `dueAt`.
 - Cancelled, completed, past, unpublished, and other-student records are excluded.
-  Missing records show an empty state. Creating assignments and calendar events
-  remains in tasks 10 and 11; dashboard data is server-managed.
+  Missing records show an empty state. Assignment authoring is complete; calendar authoring
+  remains in Task 11; dashboard data is server-managed.
 
 Run `pnpm test:statistics` for aggregation, timezone, audience and isolation tests.
 `tests/e2e/dashboard.spec.ts` checks signed-out access and, with Firebase emulators,
@@ -542,7 +542,7 @@ optional `dueAt`. Expanded group recipients can use `studentUids`. It reads trus
 `progress/{uid}.completedQuestions` documents beneath each assignment. Missing
 progress shows not started (or overdue after its deadline), and completed counts
 are clamped to the target. Assignment creation and automatic progress updates
-remain task 10; ordinary practice is not credited without a progress record.
+are implemented in Task 10. Only assignment-bound practice earns progress.
 
 Deck activity reports current owned deck/card inventory and the latest surviving
 deck's update timestamp; it does not expose private card text. In-site answer
@@ -591,7 +591,7 @@ Old sessions cannot earn new credit; completion views show the current version a
 preserve old receipts for audit. Editing instructions, title, audience or deadline
 retains progress. Existing records without an explicit version are version 1.
 Missing progress is not started; absent/malformed performance is unknown. Team and
-student dashboards read the same completion contract.
+student assignment views read the same completion contract.
 
 Teachers curate original question collections, tags and notes at `/teacher-decks`.
 Use **Share with students** or **Stop sharing with students** to manage school
@@ -599,14 +599,25 @@ access; sharing can also be chosen during creation. Only verified current staff
 creators can change teacher sharing. Revocation removes the directory pointer
 atomically. Student shared reads, copies, practice and APKG exports check live
 visibility, membership, and the creator's current school staff/membership records.
-Teacher-specific edit protections remain the final Task 10 High subtask. Students
-study, copy, practice and export school shares via `/decks`. Shared-reader sessions
-retain original question snapshots;
+Every teacher-deck write (including legacy history saves) checks current verified
+school staff membership and immutable creator provenance inside its transaction.
+Only that creator can edit, save/remove cards, delete, or change sharing. Losing
+staff access makes the original deck read-only, including to its former creator;
+other staff cannot edit it through another owner's ID. The API rejects forged
+ownership/provenance fields and attempts to write through a shared ID. Student
+copies are independent personal decks and retain the original source questions.
+Students study, copy, practice and export school shares via `/decks`. Shared-reader
+sessions retain original question snapshots;
 CSV exports use cards already loaded in the browser.
 
-Unit tests cover targeting, filters, requirement versions, transaction retries,
-concurrent/duplicate submissions, bonus parts and revoked assignment access.
-Firebase-emulator browser tests exercise student assignment practice and saved
-results on desktop/mobile. Run the existing assignment/practice/team test scripts
-and `tests/e2e/task10-high.spec.ts` with Firebase emulators. Direct client writes to
-assignment and progress documents remain denied by the deployed rules.
+All twelve Task 10 subtasks are complete. Validation includes 60 unit tests, 18
+Firebase rules tests, desktop/mobile assignment and teacher-deck browser tests,
+lint, formatting, typecheck and a fresh production build. Unit tests cover targeting,
+filters, requirement versions, retries/concurrency, source deduplication, bonus
+parts, assignment revocation, and every teacher-deck mutation permission path.
+Browser checks also cover student copying/practice/APKG exports, explicit unsharing,
+wrong-school access, forged ownership, and unverified/revoked staff. Run the existing
+assignment/practice/team scripts, `node --test tests/deck-permissions.test.mjs`, and
+the task10-high/teacher-decks/assignments/deck-sharing browser specs with emulators.
+No rules deployment is needed: existing deployed rules already deny direct client
+writes to decks, sharing pointers, assignment bindings, progress and credit receipts.

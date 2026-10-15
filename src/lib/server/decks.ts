@@ -17,6 +17,7 @@ import {
   writeAudience,
 } from "./deck-sharing";
 import { siteTeam } from "./site-team";
+import { requireDeckEditor, requireTeacherCreator } from "./deck-permissions";
 
 const stamp = () => FieldValue.serverTimestamp();
 export function deckText(value: unknown, max: number, required = false) {
@@ -53,18 +54,28 @@ export async function ensureStarred(db: Firestore, uid: string) {
       });
   });
 }
-export async function studyDecks(db: Firestore, uid: string) {
+export async function studyDecks(db: Firestore, uid: string, verified = false) {
   await ensureStarred(db, uid);
   const decks = await db
     .collection(`users/${uid}/decks`)
     .orderBy("createdAt", "desc")
     .get();
+  const [staff, member] = await db.getAll(
+    db.doc(`staff/${uid}`),
+    db.doc(`teams/${siteTeam().id}/members/${uid}`),
+  );
+  const canCurate =
+    verified &&
+    member.exists &&
+    staff.data()?.teamId === siteTeam().id &&
+    ["teacher", "admin"].includes(staff.data()?.role);
   const owned = await Promise.all(
     decks.docs.map(async (doc) => {
       return serializeDeck(
         doc,
         await doc.ref.collection("questions").get(),
-        true,
+        doc.data().curatedBy === undefined ||
+          (doc.data().curatedBy === uid && canCurate),
       );
     }),
   );
@@ -156,6 +167,7 @@ export async function mutateDeck(
   db: Firestore,
   uid: string,
   body: Record<string, unknown>,
+  verified = false,
 ) {
   if (body.action === "create") {
     const ref = db.collection(`users/${uid}/decks`).doc();
@@ -169,13 +181,7 @@ export async function mutateDeck(
     };
     await db.runTransaction(async (tx) => {
       if (body.teacherCurated === true) {
-        const staff = (await tx.get(db.doc(`staff/${uid}`))).data();
-        if (
-          !staff ||
-          staff.teamId !== siteTeam().id ||
-          !["teacher", "admin"].includes(staff.role)
-        )
-          throw new PracticeError("Staff access required.", 403);
+        await requireTeacherCreator(db, tx, uid, verified);
       }
       const audience = await audienceFields(
         db,
@@ -247,6 +253,8 @@ export async function mutateDeck(
       const snapshots = await Promise.all(refs.map((ref) => tx.get(ref)));
       if (snapshots.some((doc) => !doc.exists))
         throw new PracticeError("Study deck not found.", 404);
+      for (const snapshot of snapshots)
+        await requireDeckEditor(db, tx, uid, snapshot.data()!, verified);
       const cards = refs.flatMap((ref) =>
         questions.map((question) => ({
           ref: ref
@@ -286,6 +294,7 @@ export async function mutateDeck(
     await db.runTransaction(async (tx) => {
       const deck = await tx.get(ref);
       if (!deck.exists) throw new PracticeError("Study deck not found.", 404);
+      await requireDeckEditor(db, tx, uid, deck.data()!, verified);
       if (deck.data()!.teamId)
         tx.delete(shareRef(db, deck.data()!.teamId, uid, ref.id));
       tx.delete(ref);
@@ -296,6 +305,7 @@ export async function mutateDeck(
   return db.runTransaction(async (tx) => {
     const deck = await tx.get(ref);
     if (!deck.exists) throw new PracticeError("Study deck not found.", 404);
+    await requireDeckEditor(db, tx, uid, deck.data()!, verified);
     if (body.action === "shareTeacher") {
       const staff = (await tx.get(db.doc(`staff/${uid}`))).data();
       if (

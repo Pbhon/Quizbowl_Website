@@ -106,9 +106,79 @@ test("teacher sharing, student study/export, revocation and school staff removal
     expect(shared.teacherCurated).toBe(true);
     expect(shared.canEdit).toBe(false);
     shareIds.push(shared.sharedId);
+    await db
+      .doc(`users/${teacher.uid}/attempts/teacher-attempt`)
+      .set({ question, outcome: "incorrect" });
+    const mutations = [
+      {
+        action: "update",
+        deckId,
+        name: "Changed teacher deck",
+        description: "Teacher notes",
+        tags: [],
+      },
+      {
+        action: "editCard",
+        deckId,
+        cardId: "q",
+        parts: question.parts,
+        answerLines: question.answerLines,
+        notes: "Edited notes",
+      },
+      { action: "removeCard", deckId, cardId: "q" },
+      { action: "delete", deckId },
+      { action: "save", deckIds: [deckId], attemptId: "teacher-attempt" },
+      { deckId, attemptId: "teacher-attempt" },
+    ];
+    for (const body of mutations.slice(0, 4)) {
+      expect(
+        (
+          await request.post("/api/decks", {
+            headers: studentHeaders,
+            data: { ...body, ownerUid: teacher.uid },
+          })
+        ).status(),
+      ).toBe(403);
+      expect(
+        (
+          await request.post("/api/decks", {
+            headers: studentHeaders,
+            data: { ...body, sharedId: shared.sharedId },
+          })
+        ).status(),
+      ).toBe(403);
+      expect(
+        (
+          await request.post("/api/decks", {
+            headers: outsiderHeaders,
+            data: body,
+          })
+        ).status(),
+      ).toBe(404);
+    }
+    expect(
+      (
+        await request.post("/api/decks", {
+          headers: teacherHeaders,
+          data: mutations[0],
+        })
+      ).status(),
+    ).toBe(200);
+    expect((await deckRef.get()).data()!.curatedBy).toBe(teacher.uid);
+    await auth.updateUser(teacher.uid, { emailVerified: false });
+    for (const body of mutations)
+      expect(
+        (
+          await request.post("/api/decks", {
+            headers: teacherHeaders,
+            data: body,
+          })
+        ).status(),
+      ).toBe(403);
+    await auth.updateUser(teacher.uid, { emailVerified: true });
     expect(
       (await decks(outsiderHeaders)).some(
-        (deck: { name: string }) => deck.name === "Teacher cells",
+        (deck: { sharedId: string }) => deck.sharedId === shared.sharedId,
       ),
     ).toBe(false);
     expect(
@@ -148,7 +218,7 @@ test("teacher sharing, student study/export, revocation and school staff removal
     ).toBeVisible();
     expect(
       (await decks(studentHeaders)).some(
-        (deck: { name: string }) => deck.name === "Teacher cells",
+        (deck: { sharedId: string }) => deck.sharedId === shared.sharedId,
       ),
     ).toBe(false);
     expect(
@@ -170,9 +240,24 @@ test("teacher sharing, student study/export, revocation and school staff removal
       page.getByRole("button", { name: "Stop sharing with students" }),
     ).toBeVisible();
     await db.doc(`staff/${teacher.uid}`).delete();
+    for (const body of mutations)
+      expect(
+        (
+          await request.post("/api/decks", {
+            headers: teacherHeaders,
+            data: body,
+          })
+        ).status(),
+      ).toBe(403);
+    const ownerDecks = await decks(teacherHeaders);
+    expect(
+      ownerDecks.find((deck: { id: string }) => deck.id === deckId).canEdit,
+    ).toBe(false);
+    expect((await deckRef.get()).data()!.name).toBe("Changed teacher deck");
+    expect((await deckRef.collection("questions").get()).size).toBe(1);
     expect(
       (await decks(studentHeaders)).some(
-        (deck: { name: string }) => deck.name === "Teacher cells",
+        (deck: { sharedId: string }) => deck.sharedId === shared.sharedId,
       ),
     ).toBe(false);
     expect(

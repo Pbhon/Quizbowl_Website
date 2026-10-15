@@ -119,12 +119,21 @@ test("private/team visibility, owner-only edits, school isolation and revocation
     await db
       .doc(`users/${owner.uid}/practiceSessions/${sessionId}/questions/0`)
       .set(question);
+    expect(
+      (
+        await ownerApi.post({
+          action: "create",
+          name: "Forged owner",
+          visibility: "team",
+          ownerUid: outsider.uid,
+        })
+      ).status(),
+    ).toBe(403);
     const response = await ownerApi.post({
       action: "create",
       name: "School review",
       visibility: "team",
       teamId: "other-school",
-      ownerUid: outsider.uid,
     });
     expect(response.status()).toBe(200);
     const { deckId } = await response.json();
@@ -211,7 +220,7 @@ test("private/team visibility, owner-only edits, school isolation and revocation
               visibility: "private",
             })
           ).status(),
-        ).toBe(404);
+        ).toBe(403);
       }
       expect(
         (
@@ -236,7 +245,7 @@ test("private/team visibility, owner-only edits, school isolation and revocation
           deckIds: ["starred"],
         })
       ).status(),
-    ).toBe(404);
+    ).toBe(403);
     expect(
       (
         await outsiderApi.post({

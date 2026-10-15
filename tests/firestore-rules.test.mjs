@@ -378,3 +378,39 @@ test("staff statistics and review receipts require server APIs; clients cannot f
     getDoc(doc(verifiedDb(), "users/student-one/attempts/attempt")),
   );
 });
+test("teacher provenance, shared sources, assignment bindings and credit receipts are server-only", async () => {
+  await seedStaff("teacher", "teacher", "team-a");
+  await seedMember("team-a", "teacher");
+  await seedMember();
+  const paths = [
+    "users/teacher/decks/curated",
+    "users/teacher/decks/curated/questions/q",
+    "teams/team-a/sharedDecks/pointer",
+    "users/student-one/practiceSessions/assigned",
+    "teams/team-a/assignments/a/progress/student-one/versions/1/questions/q",
+  ];
+  await env.withSecurityRulesDisabled(async (context) => {
+    for (const path of paths)
+      await setDoc(doc(context.firestore(), path), {
+        curatedBy: "teacher",
+        completed: false,
+      });
+  });
+  for (const client of [
+    verifiedDb("teacher"),
+    verifiedDb(),
+    verifiedDb("admin"),
+    env.unauthenticatedContext().firestore(),
+  ]) {
+    for (const path of paths) {
+      await assertFails(getDoc(doc(client, path)));
+      await assertFails(
+        updateDoc(doc(client, path), {
+          curatedBy: "student-one",
+          completed: true,
+        }),
+      );
+      await assertFails(deleteDoc(doc(client, path)));
+    }
+  }
+});

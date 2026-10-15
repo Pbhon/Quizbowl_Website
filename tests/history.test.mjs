@@ -28,6 +28,11 @@ class PracticeError extends Error {
   }
 }
 const server = load("src/lib/server/history.ts", {
+  "./deck-permissions": load("src/lib/server/deck-permissions.ts", {
+    "server-only": {},
+    "./practice-persistence": { PracticeError },
+    "./site-team": { siteTeam: () => ({ id: "school" }) },
+  }),
   "server-only": {},
   "firebase-admin/firestore": {
     FieldValue: { serverTimestamp: () => "timestamp" },
@@ -85,6 +90,13 @@ function fakeDB(records) {
     doc: ref,
     reads,
     writes,
+    runTransaction: async (work) =>
+      work({
+        get: async (ref) => snapshot(ref.path),
+        create: (ref, data) => writes.push({ path: ref.path, data }),
+        set: (ref, data) => writes.push({ path: ref.path, data }),
+        update: (ref, data) => writes.push({ path: ref.path, data }),
+      }),
     batch: () => ({
       create: (ref, data) => writes.push({ path: ref.path, data }),
       set: (ref, data) => writes.push({ path: ref.path, data }),
@@ -203,4 +215,20 @@ test("retry reads only the owner's original incorrect question; saving retains a
   assert.ok(
     db.writes.every((write) => write.path.startsWith("users/alice/decks/")),
   );
+});
+test("legacy history saving checks current teacher permissions before writing", async () => {
+  const db = fakeDB({
+    "users/alice/attempts/missed": { question, outcome: "incorrect" },
+    "users/alice/decks/curated": { name: "Teacher deck", curatedBy: "alice" },
+  });
+  await assert.rejects(
+    server.saveHistoryToDeck(
+      db,
+      "alice",
+      { attemptId: "missed", deckId: "curated" },
+      true,
+    ),
+    (e) => e.status === 403,
+  );
+  assert.equal(db.writes.length, 0);
 });

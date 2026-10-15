@@ -71,7 +71,7 @@ logged-in account; switching accounts clears the previous dashboard. Question
 counts deduplicate bonus parts within each session, while correct/incorrect and
 accuracy use individual responses (matching task 3). Activity follows the
 student's timezone. Upcoming items are filtered by school membership, publication,
-date, and student/team audience; authoring these items remains in tasks 10 and 11.
+date, and student/team audience. Assignment authoring is complete in Task 10; calendar authoring remains Task 11.
 
 ## 5. Question History
 - [x] **[Low]** Display the 30 most recent question attempts
@@ -193,7 +193,7 @@ interactive trends, heatmaps, weak areas, participation, assignment completion,
 deck inventory and in-site flashcard reviews, and individual/team CSV exports.
 Staff access and current membership are checked server-side; other schools'
 data and private card contents are excluded. Assignment completion reads saved
-published assignment progress; authoring and automatic updates remain task 10.
+published assignment progress; authoring and automatic updates are complete in Task 10.
 Review tracking starts with this feature and covers in-site answer reveals;
 Anki review synchronization remains task 14. Unit tests, Firebase rules tests,
 desktop/mobile emulator browser tests, lint, typecheck, formatting, and a fresh
@@ -212,15 +212,20 @@ counting rules.
 - [x] **[Medium]** Create teacher-curated study decks
 - [x] **[High]** Share teacher decks with students
 - [x] **[Medium]** Allow students to practice and export shared decks
-- [ ] **[High]** Prevent unauthorized edits to teacher-created decks
+- [x] **[High]** Prevent unauthorized edits to teacher-created decks
 
-Task 10's non-High subtasks and automatic assignment progress are complete.
-Students start assignment-bound sessions from `/assignments`; requirements are
-checked server-side and progress updates atomically with final responses. Bonuses
-count once after all parts; retries and repeated source questions cannot add credit.
-Requirement changes start a new progress version. Ordinary practice is not credited.
-Teacher-curated decks can be shared with school students and revoked. Teacher-specific edit protections remain the final High subtask.
-See README.md for the progress/version contract and validation.
+All twelve Task 10 subtasks are complete. `/assignments` supports authoring,
+student/group/team audiences, requirements, deadlines, saved results and automatic
+progress. Assignment sessions enforce the current requirements; final responses
+and source-based progress commit atomically. Bonuses count after every part;
+prompts, retries, repeated sources and ordinary practice cannot inflate progress.
+Changing requirements starts a new version and rejects credit from old sessions.
+`/teacher-decks` supports private or school-shared teacher collections. Student
+study, copying, practice and export check live school access; revocation removes
+the sharing pointer. Only the current verified staff creator can edit the source,
+including through legacy saves; revoked/unverified creators are read-only. Direct
+client writes remain denied. Unit, rules and desktop/mobile browser tests, lint,
+formatting, typecheck and a fresh production build pass. See README.md for details.
 
 ## 11. Team Calendar & Announcements
 - [ ] **[Medium]** Build a shared team calendar

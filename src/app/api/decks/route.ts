@@ -32,8 +32,9 @@ function failure(error: unknown) {
 export async function GET(request: Request) {
   try {
     const account = (await authenticatePractice(request))!;
+    const user = await getFirebaseAdmin().auth.getUser(account.uid);
     return Response.json(
-      { decks: await studyDecks(account.db, account.uid) },
+      { decks: await studyDecks(account.db, account.uid, user.emailVerified) },
       { headers },
     );
   } catch (error) {
@@ -49,14 +50,28 @@ export async function POST(request: Request) {
     const body = JSON.parse(text);
     if (!body || typeof body !== "object" || Array.isArray(body))
       throw new PracticeError("Invalid request.", 400);
+    if (
+      (body.ownerUid !== undefined && body.ownerUid !== account.uid) ||
+      body.curatedBy !== undefined ||
+      body.sharedId !== undefined
+    )
+      throw new PracticeError(
+        "Shared source decks cannot be edited. Copy a card into your own deck instead.",
+        403,
+      );
+    const user = await getFirebaseAdmin().auth.getUser(account.uid);
     if (body.teacherCurated === true || body.action === "shareTeacher") {
-      const user = await getFirebaseAdmin().auth.getUser(account.uid);
       await requireTeamStaff(account.db, account.uid, user.emailVerified);
     }
     return Response.json(
       body.action === undefined
-        ? await saveHistoryToDeck(account.db, account.uid, body)
-        : await mutateDeck(account.db, account.uid, body),
+        ? await saveHistoryToDeck(
+            account.db,
+            account.uid,
+            body,
+            user.emailVerified,
+          )
+        : await mutateDeck(account.db, account.uid, body, user.emailVerified),
       { headers },
     );
   } catch (error) {

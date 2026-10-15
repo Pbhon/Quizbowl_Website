@@ -95,6 +95,7 @@ function database(staff = { role: "teacher", teamId: "school" }) {
           exists: [
             "teams/school/members/student",
             "teams/school/members/student2",
+            "teams/school/members/teacher",
           ].includes(ref.path),
           data: () => (ref.path === "staff/teacher" ? staff : undefined),
         }),
@@ -380,6 +381,11 @@ test("student workspace excludes drafts and other students' work and progress", 
   );
 });
 const deckServer = load("src/lib/server/decks.ts", {
+  "./deck-permissions": load("src/lib/server/deck-permissions.ts", {
+    "server-only": {},
+    "./practice-persistence": { PracticeError },
+    "./site-team": imports["./site-team"],
+  }),
   "server-only": {},
   "node:crypto": {},
   "firebase-admin/firestore": imports["firebase-admin/firestore"],
@@ -394,11 +400,16 @@ const deckServer = load("src/lib/server/decks.ts", {
 });
 test("teacher curation preserves author provenance and checks current staff", async () => {
   const { db, writes } = database();
-  const result = await deckServer.mutateDeck(db, "teacher", {
-    action: "create",
-    name: "Biology",
-    teacherCurated: true,
-  });
+  const result = await deckServer.mutateDeck(
+    db,
+    "teacher",
+    {
+      action: "create",
+      name: "Biology",
+      teacherCurated: true,
+    },
+    true,
+  );
   assert.equal(result.deckId, "new");
   assert.equal(writes[0].data.curatedBy, "teacher");
   assert.equal(writes[0].data.visibility, "private");
@@ -407,6 +418,7 @@ test("teacher curation preserves author provenance and checks current staff", as
       database({ role: "student", teamId: "school" }).db,
       "teacher",
       { action: "create", name: "Biology", teacherCurated: true },
+      true,
     ),
     (e) => e.status === 403,
   );

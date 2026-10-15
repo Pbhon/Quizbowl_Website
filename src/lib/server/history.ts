@@ -9,6 +9,7 @@ import {
 } from "@/lib/history";
 import { PracticeError } from "./practice-persistence";
 import { timestampISO } from "./dashboard";
+import { requireDeckEditor } from "./deck-permissions";
 
 export function documentId(value: unknown): string {
   if (typeof value !== "string" || !/^[a-zA-Z0-9_-]{1,200}$/.test(value))
@@ -114,6 +115,7 @@ export async function saveHistoryToDeck(
   db: Firestore,
   uid: string,
   body: Record<string, unknown>,
+  verified = false,
 ) {
   const question = await historyQuestion(db, uid, body.attemptId);
   const decks = db.collection(`users/${uid}/decks`);
@@ -126,19 +128,24 @@ export async function saveHistoryToDeck(
   )
     throw new PracticeError("Enter a deck name of 1–80 characters.", 400);
   const deck = isNew ? decks.doc() : decks.doc(documentId(body.deckId));
-  if (!isNew && !(await deck.get()).exists)
-    throw new PracticeError("Study deck not found.", 404);
-  const batch = db.batch();
-  if (isNew)
-    batch.create(deck, {
-      name: (body.name as string).trim(),
-      createdAt: FieldValue.serverTimestamp(),
+  const card = deck.collection("questions").doc();
+  await db.runTransaction(async (tx) => {
+    const existing = await tx.get(deck);
+    if (!isNew && !existing.exists)
+      throw new PracticeError("Study deck not found.", 404);
+    if (!isNew)
+      await requireDeckEditor(db, tx, uid, existing.data()!, verified);
+    if (isNew)
+      tx.create(deck, {
+        name: (body.name as string).trim(),
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    // Save the original full question, including every bonus part and judging answer line.
+    tx.set(card, {
+      question,
+      savedAt: FieldValue.serverTimestamp(),
     });
-  // Save the original full question, including every bonus part and judging answer line.
-  batch.set(deck.collection("questions").doc(), {
-    question,
-    savedAt: FieldValue.serverTimestamp(),
+    if (!isNew) tx.update(deck, { updatedAt: FieldValue.serverTimestamp() });
   });
-  await batch.commit();
   return { deckId: deck.id };
 }
