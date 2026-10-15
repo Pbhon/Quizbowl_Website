@@ -32,7 +32,7 @@ export type Upcoming = {
   id: string;
   title: string;
   date: string;
-  kind: "assignment" | "competition";
+  kind: "assignment" | "competition" | "practice" | "event";
 };
 const empty = (): Performance => ({
   questions: 0,

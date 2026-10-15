@@ -315,24 +315,35 @@ function DashboardWorkspace({ user }: { user: User }) {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Upcoming assignments and competitions</CardTitle>
+            <CardTitle>Upcoming assignments and team events</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {data.upcoming.length ? (
               data.upcoming.map((item) => (
                 <div className="border-t pt-3" key={item.id}>
-                  <p className="font-medium">{item.title}</p>
+                  <Link
+                    className="font-medium text-primary underline"
+                    href={
+                      item.kind === "assignment" ? "/assignments" : "/calendar"
+                    }
+                  >
+                    {item.title}
+                  </Link>
                   <p className="text-sm text-muted-foreground">
                     {item.kind === "assignment"
                       ? "Assignment due"
-                      : "Competition"}{" "}
+                      : item.kind === "practice"
+                        ? "Team practice"
+                        : item.kind === "competition"
+                          ? "Competition"
+                          : "Team event"}{" "}
                     · {new Date(item.date).toLocaleString()}
                   </p>
                 </div>
               ))
             ) : (
               <p className="text-sm">
-                No upcoming assignments or competitions have been published for
+                No upcoming assignments or team events have been published for
                 you.
               </p>
             )}

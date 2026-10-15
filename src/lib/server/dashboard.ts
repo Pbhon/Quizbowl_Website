@@ -47,8 +47,14 @@ export async function loadDashboard(
     records.forEach((snapshot, index) =>
       snapshot.docs.forEach((doc) => {
         const data = doc.data();
-        const kind = index === 0 ? "assignment" : "competition";
-        if (kind === "competition" && data.type !== "competition") return;
+        const kind =
+          index === 0
+            ? "assignment"
+            : data.type === "competition"
+              ? "competition"
+              : data.type === "practice"
+                ? "practice"
+                : "event";
         const field = index === 0 ? "dueAt" : "startsAt";
         data[field] = timestampISO(data[field]);
         if (

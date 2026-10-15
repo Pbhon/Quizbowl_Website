@@ -6,6 +6,7 @@ import { useAuth } from "./auth-provider";
 import { AccountGuard } from "./account-guard";
 import { PageHeading } from "./page-heading";
 import { Notice } from "./form-field";
+import { CalendarPreview } from "./calendar-preview";
 import { Button } from "./ui/button";
 import type { Breakdown } from "@/lib/statistics";
 import type { TeamDashboardData } from "@/lib/team-dashboard";
@@ -97,6 +98,7 @@ function Workspace({ user }: { user: User }) {
   }, [user, reload]);
   return (
     <div className="space-y-6">
+      <CalendarPreview user={user} />
       <PageHeading
         title="Teacher/Admin dashboard"
         description="Your school's roster and student practice progress."

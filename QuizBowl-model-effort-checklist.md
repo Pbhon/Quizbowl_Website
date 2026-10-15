@@ -236,7 +236,7 @@ formatting, typecheck and a fresh production build pass. See README.md for detai
 - [x] **[Low]** Add tournament locations and descriptions
 - [x] **[Low]** Allow students to view team events
 - [x] **[Medium]** Support optional event RSVPs
-- [ ] **[Low]** Display upcoming events on dashboards
+- [x] **[Low]** Display upcoming events on dashboards
 - [ ] **[Low]** Create team announcements
 - [ ] **[Medium]** Add optional calendar export or synchronization
 
@@ -286,6 +286,7 @@ formatting, typecheck and a fresh production build pass. See README.md for detai
 - [ ] **[Medium]** AI explanations for difficult clues
 - [ ] **[High]** Anki review progress synchronization
 - [ ] **[High]** Optional support for multiple school teams
+
 
 
 
