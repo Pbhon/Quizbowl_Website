@@ -48,7 +48,9 @@ export async function saveCalendar(
   }
   if (endsAt && endsAt <= startsAt)
     throw new PracticeError("End time must follow start time.", 400);
-  if (!["event", "competition"].includes(String(body.type ?? "event")))
+  if (
+    !["event", "competition", "practice"].includes(String(body.type ?? "event"))
+  )
     throw new PracticeError("Choose a valid event type.", 400);
   const data = {
     title: deckText(body.title, 120, true),

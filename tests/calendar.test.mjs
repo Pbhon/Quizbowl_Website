@@ -156,6 +156,19 @@ test("competition dates retain their event type", async () => {
     (e) => e.status === 400,
   );
 });
+test("practice schedules support a start and end", async () => {
+  const { db, records } = database();
+  await server.saveCalendar(db, "admin", true, {
+    ...base,
+    type: "practice",
+    endsAt: "2026-11-01T13:00:00.000Z",
+  });
+  assert.equal(records.get("teams/school/events/new").type, "practice");
+  assert.equal(
+    records.get("teams/school/events/new").endsAt,
+    "2026-11-01T13:00:00.000Z",
+  );
+});
 test("only current verified school admins create or edit events", async () => {
   const { db, records } = database();
   for (const [uid, verified] of [

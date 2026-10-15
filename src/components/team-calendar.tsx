@@ -182,6 +182,7 @@ function EventForm({
               >
                 <option value="event">Other event</option>
                 <option value="competition">Competition / tournament</option>
+                <option value="practice">Team practice</option>
               </select>
             </FormField>
             <FormField id="event-title" label="Event title">
