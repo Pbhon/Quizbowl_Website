@@ -5,7 +5,13 @@ import type { User } from "firebase/auth";
 import type { CalendarWorkspace } from "@/lib/calendar";
 import { calendarRequest } from "./team-calendar";
 import { Notice } from "./form-field";
-export function CalendarPreview({ user }: { user: User }) {
+export function CalendarPreview({
+  user,
+  announcementsOnly = false,
+}: {
+  user: User;
+  announcementsOnly?: boolean;
+}) {
   const [data, setData] = useState<CalendarWorkspace | null>(null),
     [error, setError] = useState("");
   useEffect(() => {
@@ -26,18 +32,41 @@ export function CalendarPreview({ user }: { user: User }) {
     .slice(0, 5);
   return (
     <section className="space-y-3 rounded-xl border bg-card p-5">
-      <h2 className="text-lg font-semibold">Upcoming team events</h2>
+      <h2 className="text-lg font-semibold">
+        {announcementsOnly
+          ? "Team announcements"
+          : "Upcoming team events and announcements"}
+      </h2>
       {error && <Notice error>{error}</Notice>}
       {!data && !error && <Notice>Loading team events…</Notice>}
-      {events?.map((event) => (
-        <p key={event.id}>
-          <Link className="text-primary underline" href="/calendar">
-            {event.title}
-          </Link>{" "}
-          · {new Date(event.startsAt).toLocaleString()}
-        </p>
-      ))}
-      {events?.length === 0 && <p>No upcoming published events.</p>}
+      {!announcementsOnly &&
+        events?.map((event) => (
+          <p key={event.id}>
+            <Link className="text-primary underline" href="/calendar">
+              {event.title}
+            </Link>{" "}
+            · {new Date(event.startsAt).toLocaleString()}
+          </p>
+        ))}
+      {!announcementsOnly && events?.length === 0 && (
+        <p>No upcoming published events.</p>
+      )}
+      {data?.announcements
+        .filter((item) => item.published)
+        .slice(0, 3)
+        .map((item) => (
+          <article key={item.id}>
+            <h3 className="font-semibold break-words">{item.title}</h3>
+            <p className="whitespace-pre-wrap break-words">
+              {item.description}
+            </p>
+          </article>
+        ))}
+      {announcementsOnly &&
+        data &&
+        !data.announcements.some((item) => item.published) && (
+          <p>No published announcements.</p>
+        )}
       <Link className="text-primary underline" href="/calendar">
         Open team calendar
       </Link>

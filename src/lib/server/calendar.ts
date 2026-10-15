@@ -9,7 +9,11 @@ import { documentId } from "./history";
 import { calendarDate, assignmentDeadline } from "@/lib/calendar";
 import { siteTeam } from "./site-team";
 import { PracticeError } from "./practice-persistence";
-import type { CalendarEvent, CalendarWorkspace } from "@/lib/calendar";
+import type {
+  Announcement,
+  CalendarEvent,
+  CalendarWorkspace,
+} from "@/lib/calendar";
 
 export async function calendarAccess(
   db: Firestore,
@@ -36,6 +40,8 @@ export async function saveCalendar(
   body: Record<string, unknown>,
 ) {
   if (body.action === "rsvp") return saveRsvp(db, uid, verified, body);
+  if (body.kind === "announcement")
+    return saveAnnouncement(db, uid, verified, body);
   if (!["create", "update"].includes(String(body.action)))
     throw new PracticeError("Unknown calendar action.", 400);
   if (typeof body.published !== "boolean")
@@ -131,11 +137,67 @@ export async function calendarWorkspace(
         }
       }
     }
+    const announcements = await tx.get(
+      db.collection(`teams/${teamId}/announcements`),
+    );
     return {
       isAdmin,
       events: events.sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
-      announcements: [],
+      announcements: announcements.docs
+        .filter((doc) => isAdmin || doc.data().published === true)
+        .map(
+          (doc) =>
+            ({
+              id: doc.id,
+              title: String(doc.data().title),
+              description: String(doc.data().description),
+              published: doc.data().published === true,
+            }) as Announcement,
+        )
+        .sort((a, b) => a.title.localeCompare(b.title)),
     };
+  });
+}
+
+async function saveAnnouncement(
+  db: Firestore,
+  uid: string,
+  verified: boolean,
+  body: Record<string, unknown>,
+) {
+  if (
+    !["create", "update"].includes(String(body.action)) ||
+    typeof body.published !== "boolean"
+  )
+    throw new PracticeError("Invalid announcement.", 400);
+  const data = {
+    title: deckText(body.title, 120, true),
+    description: deckText(body.description, 2000, true),
+    published: body.published,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+  return db.runTransaction(async (tx) => {
+    const { teamId, isAdmin } = await calendarAccess(db, tx, uid, verified);
+    if (!isAdmin)
+      throw new PracticeError(
+        "Verified school administrator access required.",
+        403,
+      );
+    const ref =
+      body.action === "create"
+        ? db.collection(`teams/${teamId}/announcements`).doc()
+        : db.doc(`teams/${teamId}/announcements/${documentId(body.id)}`);
+    const existing = await tx.get(ref);
+    if (body.action === "update" && !existing.exists)
+      throw new PracticeError("Announcement not found.", 404);
+    if (body.action === "create")
+      tx.create(ref, {
+        ...data,
+        createdBy: uid,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    else tx.update(ref, data);
+    return { announcementId: ref.id };
   });
 }
 

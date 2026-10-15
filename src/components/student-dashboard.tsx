@@ -6,6 +6,7 @@ import type { User } from "firebase/auth";
 import { useAuth } from "./auth-provider";
 import { AccountGuard } from "./account-guard";
 import { PageHeading } from "./page-heading";
+import { CalendarPreview } from "./calendar-preview";
 import { Notice } from "./form-field";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -93,6 +94,7 @@ function DashboardWorkspace({ user }: { user: User }) {
     rows.find((row) => row.label === selected) || rows[rows.length - 1];
   return (
     <div className="space-y-8">
+      <CalendarPreview user={user} announcementsOnly />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <PageHeading
           title="Your dashboard"

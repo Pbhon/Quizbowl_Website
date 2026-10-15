@@ -5,6 +5,7 @@ import type { User } from "firebase/auth";
 import { useAuth } from "./auth-provider";
 import { AccountGuard } from "./account-guard";
 import { PageHeading } from "./page-heading";
+import { TeamAnnouncements } from "./team-announcements";
 import { FormField, Notice } from "./form-field";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -80,6 +81,13 @@ function Calendar({ user }: { user: User }) {
       {error && <Notice error>{error}</Notice>}
       {!data && !error && <Notice>Loading calendar…</Notice>}
       {data && <MonthView events={data.events} />}
+      {data && (
+        <TeamAnnouncements
+          data={data}
+          user={user}
+          done={() => setRevision((n) => n + 1)}
+        />
+      )}
       {data?.isAdmin && (
         <EventForm
           key={editing?.id || "new"}

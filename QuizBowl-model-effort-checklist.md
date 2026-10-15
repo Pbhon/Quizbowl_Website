@@ -237,7 +237,7 @@ formatting, typecheck and a fresh production build pass. See README.md for detai
 - [x] **[Low]** Allow students to view team events
 - [x] **[Medium]** Support optional event RSVPs
 - [x] **[Low]** Display upcoming events on dashboards
-- [ ] **[Low]** Create team announcements
+- [x] **[Low]** Create team announcements
 - [ ] **[Medium]** Add optional calendar export or synchronization
 
 ## 12. Firebase Database & Backend
@@ -286,6 +286,7 @@ formatting, typecheck and a fresh production build pass. See README.md for detai
 - [ ] **[Medium]** AI explanations for difficult clues
 - [ ] **[High]** Anki review progress synchronization
 - [ ] **[High]** Optional support for multiple school teams
+
 
 
 

@@ -302,3 +302,43 @@ test("only current verified school admins create or edit events", async () => {
       (e) => e.status === 400,
     );
 });
+test("announcements use admin authoring and published school-only reads", async () => {
+  const { db, records } = database();
+  const body = {
+    kind: "announcement",
+    action: "create",
+    title: "Travel update",
+    description: "Meet at school.",
+    published: false,
+  };
+  for (const uid of ["teacher", "student", "foreign"])
+    await assert.rejects(
+      server.saveCalendar(db, uid, true, body),
+      (e) => e.status === 403,
+    );
+  await server.saveCalendar(db, "admin", true, body);
+  assert.equal(
+    (await server.calendarWorkspace(db, "student", true)).announcements.length,
+    0,
+  );
+  assert.equal(
+    (await server.calendarWorkspace(db, "admin", true)).announcements.length,
+    1,
+  );
+  await server.saveCalendar(db, "admin", true, {
+    ...body,
+    action: "update",
+    id: "new",
+    published: true,
+  });
+  assert.equal(
+    (await server.calendarWorkspace(db, "student", true)).announcements[0]
+      .title,
+    "Travel update",
+  );
+  records.set("staff/admin", { role: "admin", teamId: "other" });
+  await assert.rejects(
+    server.saveCalendar(db, "admin", true, body),
+    (e) => e.status === 403,
+  );
+});
