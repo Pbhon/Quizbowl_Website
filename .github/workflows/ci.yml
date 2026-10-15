@@ -36,3 +36,11 @@ jobs:
       - run: pnpm exec firebase emulators:exec --project demo-quizbowl --only auth,firestore "pnpm test:e2e"
         env:
           E2E_FIREBASE: 'true'
+      - name: Save browser failure traces
+        if: failure()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: browser-failure-traces
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7

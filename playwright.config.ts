@@ -6,6 +6,8 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   timeout: 45000,
+  // A fresh CI runner compiles the auth routes and initializes Firebase on first sign-in.
+  expect: { timeout: process.env.CI ? 20000 : 5000 },
   use: {
     baseURL: "http://127.0.0.1:3100",
     trace: "retain-on-failure",
