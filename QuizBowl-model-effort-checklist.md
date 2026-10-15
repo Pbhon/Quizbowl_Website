@@ -230,7 +230,7 @@ formatting, typecheck and a fresh production build pass. See README.md for detai
 ## 11. Team Calendar & Announcements
 - [x] **[Medium]** Build a shared team calendar
 - [x] **[Medium]** Allow admins to create and edit events
-- [ ] **[Low]** Add competition and tournament dates
+- [x] **[Low]** Add competition and tournament dates
 - [ ] **[Low]** Add team practice schedules
 - [ ] **[Medium]** Add assignment deadlines
 - [ ] **[Low]** Add tournament locations and descriptions
@@ -286,5 +286,6 @@ formatting, typecheck and a fresh production build pass. See README.md for detai
 - [ ] **[Medium]** AI explanations for difficult clues
 - [ ] **[High]** Anki review progress synchronization
 - [ ] **[High]** Optional support for multiple school teams
+
 
 

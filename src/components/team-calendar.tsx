@@ -152,6 +152,7 @@ function EventForm({
                 action: event ? "update" : "create",
                 id: event?.id,
                 title: form.get("title"),
+                type: form.get("type"),
                 startsAt: new Date(String(form.get("startsAt"))).toISOString(),
                 endsAt: form.get("endsAt")
                   ? new Date(String(form.get("endsAt"))).toISOString()
@@ -172,6 +173,17 @@ function EventForm({
             {event ? "Edit event" : "Create event"}
           </h2>
           <fieldset disabled={busy} className="space-y-4">
+            <FormField id="event-type" label="Event type">
+              <select
+                id="event-type"
+                name="type"
+                className="form-select"
+                defaultValue={event?.type || "event"}
+              >
+                <option value="event">Other event</option>
+                <option value="competition">Competition / tournament</option>
+              </select>
+            </FormField>
             <FormField id="event-title" label="Event title">
               <Input
                 id="event-title"

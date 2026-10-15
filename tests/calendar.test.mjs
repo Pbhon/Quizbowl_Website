@@ -144,6 +144,18 @@ const base = {
   startsAt: "2026-11-01T12:00:00.000Z",
   published: true,
 };
+test("competition dates retain their event type", async () => {
+  const { db, records } = database();
+  await server.saveCalendar(db, "admin", true, {
+    ...base,
+    type: "competition",
+  });
+  assert.equal(records.get("teams/school/events/new").type, "competition");
+  await assert.rejects(
+    server.saveCalendar(db, "admin", true, { ...base, type: "unknown" }),
+    (e) => e.status === 400,
+  );
+});
 test("only current verified school admins create or edit events", async () => {
   const { db, records } = database();
   for (const [uid, verified] of [
