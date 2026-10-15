@@ -169,6 +169,44 @@ test("practice schedules support a start and end", async () => {
     "2026-11-01T13:00:00.000Z",
   );
 });
+test("deadlines follow current assignment publication, audience and due date", async () => {
+  const { db, records } = database();
+  const path = "teams/school/assignments/a";
+  const data = {
+    title: "Work",
+    published: true,
+    audience: "students",
+    studentUids: ["student"],
+    dueAt: base.startsAt,
+  };
+  records.set(path, data);
+  assert.equal(
+    (await server.calendarWorkspace(db, "student", true)).events.filter(
+      (e) => e.type === "assignment",
+    ).length,
+    1,
+  );
+  for (const patch of [
+    { published: false },
+    { studentUids: ["someone-else"] },
+    { dueAt: null },
+  ]) {
+    records.set(path, { ...data, ...patch });
+    assert.equal(
+      (await server.calendarWorkspace(db, "student", true)).events.filter(
+        (e) => e.type === "assignment",
+      ).length,
+      0,
+    );
+  }
+  records.set(path, { ...data, dueAt: "2026-12-01T12:00:00.000Z" });
+  assert.equal(
+    (await server.calendarWorkspace(db, "student", true)).events.find(
+      (e) => e.type === "assignment",
+    ).startsAt,
+    "2026-12-01T12:00:00.000Z",
+  );
+});
 test("only current verified school admins create or edit events", async () => {
   const { db, records } = database();
   for (const [uid, verified] of [

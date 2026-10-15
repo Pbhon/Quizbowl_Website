@@ -6,7 +6,7 @@ import {
 } from "firebase-admin/firestore";
 import { deckText } from "./decks";
 import { documentId } from "./history";
-import { calendarDate } from "@/lib/calendar";
+import { calendarDate, assignmentDeadline } from "@/lib/calendar";
 import { siteTeam } from "./site-team";
 import { PracticeError } from "./practice-persistence";
 import type { CalendarEvent, CalendarWorkspace } from "@/lib/calendar";
@@ -99,6 +99,13 @@ export async function calendarWorkspace(
     const events = records.docs
       .filter((doc) => isAdmin || doc.data().published === true)
       .map((doc) => ({ ...doc.data(), id: doc.id }) as CalendarEvent);
+    const assignments = await tx.get(
+      db.collection(`teams/${teamId}/assignments`),
+    );
+    for (const doc of assignments.docs) {
+      const deadline = assignmentDeadline(doc.id, doc.data(), uid, isAdmin);
+      if (deadline) events.push(deadline);
+    }
     return {
       isAdmin,
       events: events.sort((a, b) => a.startsAt.localeCompare(b.startsAt)),

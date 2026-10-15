@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { User } from "firebase/auth";
 import { useAuth } from "./auth-provider";
 import { AccountGuard } from "./account-guard";
@@ -105,6 +106,11 @@ function Calendar({ user }: { user: User }) {
             </p>
             {event.endsAt && (
               <p>Until {new Date(event.endsAt).toLocaleString()}</p>
+            )}
+            {event.type === "assignment" && (
+              <Link className="text-primary underline" href="/assignments">
+                View assignment
+              </Link>
             )}
             {data.isAdmin && event.type !== "assignment" && (
               <Button variant="outline" onClick={() => setEditing(event)}>

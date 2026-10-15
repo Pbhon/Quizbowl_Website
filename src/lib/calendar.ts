@@ -33,3 +33,46 @@ export function calendarDate(value: unknown): string {
     throw new Error("Enter a valid date and time.");
   return value;
 }
+export function assignmentDeadline(
+  id: string,
+  data: Record<string, unknown>,
+  uid: string,
+  isAdmin: boolean,
+): CalendarEvent | null {
+  if (
+    data.published !== true ||
+    (!isAdmin &&
+      data.audience !== "team" &&
+      !(
+        data.audience === "students" &&
+        Array.isArray(data.studentUids) &&
+        data.studentUids.includes(uid)
+      ))
+  )
+    return null;
+  let startsAt: string;
+  try {
+    const value = data.dueAt;
+    startsAt = calendarDate(
+      typeof value === "object" &&
+        value &&
+        "toDate" in value &&
+        typeof value.toDate === "function"
+        ? value.toDate().toISOString()
+        : value,
+    );
+  } catch {
+    return null;
+  }
+  return {
+    id: `assignment:${id}`,
+    title: String(data.title || "Assignment"),
+    description: String(data.description || ""),
+    location: "",
+    type: "assignment",
+    startsAt,
+    endsAt: null,
+    published: true,
+    rsvpEnabled: false,
+  };
+}
