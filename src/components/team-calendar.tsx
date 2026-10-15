@@ -100,6 +100,12 @@ function Calendar({ user }: { user: User }) {
         <Card key={event.id}>
           <CardContent className="space-y-3 pt-6">
             <h2 className="text-lg font-semibold">{event.title}</h2>
+            {event.location && <p>Location: {event.location}</p>}
+            {event.description && (
+              <p className="whitespace-pre-wrap break-words">
+                {event.description}
+              </p>
+            )}
             <p>{new Date(event.startsAt).toLocaleString()}</p>
             <p>
               {event.published ? "Published" : "Draft"} · {event.type}
@@ -158,6 +164,8 @@ function EventForm({
                 action: event ? "update" : "create",
                 id: event?.id,
                 title: form.get("title"),
+                description: form.get("description"),
+                location: form.get("location"),
                 type: form.get("type"),
                 startsAt: new Date(String(form.get("startsAt"))).toISOString(),
                 endsAt: form.get("endsAt")
@@ -207,6 +215,23 @@ function EventForm({
                 type="datetime-local"
                 required
                 defaultValue={localDate(event?.startsAt)}
+              />
+            </FormField>
+            <FormField id="event-location" label="Location">
+              <Input
+                id="event-location"
+                name="location"
+                maxLength={300}
+                defaultValue={event?.location}
+              />
+            </FormField>
+            <FormField id="event-description" label="Description">
+              <textarea
+                id="event-description"
+                name="description"
+                className="form-select min-h-24"
+                maxLength={2000}
+                defaultValue={event?.description}
               />
             </FormField>
             <FormField id="event-end" label="Ends at (optional)">

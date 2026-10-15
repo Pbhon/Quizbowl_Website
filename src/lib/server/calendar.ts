@@ -54,8 +54,8 @@ export async function saveCalendar(
     throw new PracticeError("Choose a valid event type.", 400);
   const data = {
     title: deckText(body.title, 120, true),
-    description: "",
-    location: "",
+    description: deckText(body.description ?? "", 2000),
+    location: deckText(body.location ?? "", 300),
     type: body.type ?? "event",
     startsAt,
     endsAt,
