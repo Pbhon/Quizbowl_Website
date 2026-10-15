@@ -23,6 +23,11 @@ jobs:
       - run: pnpm test:accounts
       - run: pnpm test:practice
       - run: pnpm test:statistics
+      - run: pnpm test:team
+      - run: pnpm test:assignments
+      - run: pnpm test:calendar
+      - run: pnpm test:anki
+      - run: node --test tests/deck-permissions.test.mjs
       - run: pnpm test:history
       - run: pnpm build
       - run: pnpm test:rules

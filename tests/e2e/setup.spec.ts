@@ -22,12 +22,16 @@ test("workspace navigation works and fits the viewport", async ({
     .click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Practice");
   if (isMobile) await expect(page.getByRole("navigation")).toBeHidden();
-  for (const [route, title] of [
-    ["decks", "Study decks"],
-    ["calendar", "Team calendar"],
-  ]) {
+  for (const route of ["decks", "teacher-decks", "calendar"]) {
     await page.goto(`/${route}`);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(title);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Sign in to continue",
+    );
+    await expect(
+      page
+        .getByRole("main")
+        .getByRole("link", { name: "Sign in", exact: true }),
+    ).toHaveAttribute("href", "/login");
   }
   await page.goto("/");
   expect(

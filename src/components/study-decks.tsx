@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { useAuth } from "./auth-provider";
 import { AccountGuard } from "./account-guard";
+import { PageHeading } from "./page-heading";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card, CardContent } from "./ui/card";
@@ -219,13 +220,23 @@ export function StudyDecks({
   const { user } = useAuth();
   return (
     <AccountGuard staff={teacherCurated}>
-      {user && (
-        <DeckWorkspace
-          key={user.uid}
-          user={user}
-          teacherCurated={teacherCurated}
+      <div className="space-y-8">
+        <PageHeading
+          title={teacherCurated ? "Teacher-curated decks" : "Study decks"}
+          description={
+            teacherCurated
+              ? "Curate original questions and study notes. Share decks with your school's students or keep them private."
+              : "Collect original questions, organize topics, and study full-question flashcards."
+          }
         />
-      )}
+        {user && (
+          <DeckWorkspace
+            key={user.uid}
+            user={user}
+            teacherCurated={teacherCurated}
+          />
+        )}
+      </div>
     </AccountGuard>
   );
 }

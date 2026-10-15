@@ -169,7 +169,9 @@ test("teacher login sees the school roster", async ({ page }, info) => {
     page.getByRole("link", { name: "Open team access" }),
   ).toBeVisible();
   await page.goto("/team");
-  await expect(page.getByText("Team members", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /^Team members \(\d+\)$/ }),
+  ).toBeVisible();
   await expect(page.getByLabel("Student email")).toHaveCount(0);
   await page.screenshot({
     path: info.outputPath("team-roster.png"),
@@ -312,7 +314,9 @@ test("admin signup rejects incorrect codes and creates staff only after a valid 
   ).toBeVisible();
   await auth.updateUser(account.uid, { emailVerified: true });
   await page.getByRole("button", { name: "Refresh verification" }).click();
-  await expect(page.getByText("Team members", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /^Team members \(\d+\)$/ }),
+  ).toBeVisible();
 
   const payload = {
     email,
