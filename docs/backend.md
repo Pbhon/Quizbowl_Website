@@ -115,3 +115,18 @@ and load current staff/membership records; teacher/admin roles never come from
 browser profile data. Rules tests cover anonymous users, owners, other students,
 verified staff, forged roles, other schools and all new server-only collections.
 No new allow rules or deployed indexes are needed for the new backend collections.
+
+## Credentials
+
+Firebase Admin and Gemini modules are server-only. Admin project IDs must match
+the configured client project; incomplete service-account pairs fail closed.
+Implicit emulator-host environment overrides are rejected outside explicit local
+demo mode, and demo mode is rejected in production. Credentials use ignored local
+environment files or hosting secrets; no private values are returned by the new APIs.
+`pnpm check:secrets` scans tracked files for private configuration, embedded key
+material and public-prefixed private keys. This is a guardrail, not a substitute
+for provider secret scanning. Rotate exposed keys in the provider console, update
+hosting secrets and redeploy; remove exposed material from repository history.
+Restrict service-account IAM to required Auth/Firestore operations. Public Firebase
+web configuration is expected in browser bundles; its protection is the rules and
+authenticated server authorization, not secrecy of the public web API key.
