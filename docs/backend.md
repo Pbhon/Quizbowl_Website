@@ -43,3 +43,32 @@ session/part/reading position and loads the canonical stored judging answer.
 Unknown submitted identity, answer-line and scoring fields have no authority.
 Only accept/reject/prompt verdicts (or an explicit skip) are allowed. Upstream
 failures write nothing. Guest `/api/practice/check-answer` never awards saved credit.
+
+## Secure generation endpoint
+
+`POST /api/ai/clues` accepts only `{ "deckId": "...", "cardId": "..." }`.
+It requires a non-revoked token, current verified email, an owned saved card and
+current teacher permissions for curated decks. It loads the original saved source,
+checks permissions again before reservation and delivery, and never takes arbitrary
+prompts or answers. It sends only original question text and official answers to
+Gemini, excluding student identity, responses, edits, notes and tags.
+
+Enable only by setting private `GEMINI_GENERATION_ENABLED=true`, `GEMINI_API_KEY`
+and `GEMINI_MODEL` to an available model supporting structured JSON output. No live
+provider calls are made by tests. The request follows Google's documented
+[structured output REST contract](https://ai.google.dev/gemini-api/docs/generate-content/structured-output?hl=en).
+Provider output is independently validated before caching and attaching cards.
+
+The shared content cache transitions generating → completed or failed. A 90-second
+lease with a unique fencing token prevents concurrent duplicate workers; expired
+leases can be recovered. Provider calls time out at 45 seconds. Failed attempts
+cool down for one minute; another explicit endpoint request retries. Daily limits
+are 20 attempts per user, 200 deployment-wide, and 10 per minute deployment-wide,
+reserved in the same transaction as the lease. Failures consume quota; cache hits
+do not. Usage records contain only counts and timestamps and expire after 32 days
+through the retention maintenance command. A lost worker may require a later retry;
+an upstream service cannot guarantee exactly-once billing after network failure.
+
+This backend endpoint does not complete Task 7's generation UI or the skipped
+Medium free-tier integration/configuration item. No ordinary fetch, answer, export
+or answer-reveal path invokes generation.
