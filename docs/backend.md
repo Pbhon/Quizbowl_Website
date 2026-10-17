@@ -130,3 +130,15 @@ hosting secrets and redeploy; remove exposed material from repository history.
 Restrict service-account IAM to required Auth/Firestore operations. Public Firebase
 web configuration is expected in browser bundles; its protection is the rules and
 authenticated server authorization, not secrecy of the public web API key.
+
+## Duplicate prevention
+
+An account-scoped UUID receipt binds the entire normalized submission input to its
+original verdict and attempt. Replay returns that verdict; conflicting reuse is
+409. Canonical part completion also prevents a second request ID from completing
+the same part. Receipt, history, summaries and credit commit together, so failed
+transactions can safely retry. Transaction callback retries, simultaneous answers,
+simultaneous skips, prompt replay after clarification, legacy receipts and separate
+intentional practice sessions have explicit regression coverage. Retain submission
+receipts at least as long as their canonical session; maintenance deletes whole
+expired sessions and their attempts/receipts together to preserve this guarantee.

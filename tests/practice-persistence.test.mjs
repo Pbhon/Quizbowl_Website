@@ -367,6 +367,46 @@ test("UUID casing and whitespace normalize; legacy attempts gain a receipt witho
   );
   await assert.rejects(() => fixture.save({ part: 1 }), { status: 409 });
 });
+test("failed transactions can retry the same submission without losing or double-counting credit", async () => {
+  const fixture = persistenceFixture();
+  const transact = fixture.db.runTransaction;
+  fixture.db.runTransaction = (callback) =>
+    transact(async (tx) => {
+      await callback(tx);
+      throw Error("Commit unavailable");
+    });
+  await assert.rejects(fixture.save());
+  assert.equal(fixture.db.records.has(fixture.attemptPath), false);
+  assert.equal(fixture.db.records.get(fixture.sessionPath).attemptedParts, 0);
+  fixture.db.runTransaction = transact;
+  await fixture.save();
+  await fixture.save();
+  assert.equal(fixture.db.records.get(fixture.sessionPath).attemptedParts, 1);
+  assert.equal(
+    fixture.db.records.get(fixture.attemptPath).submissions.length,
+    1,
+  );
+});
+test("skip retries are idempotent and different submissions cannot overwrite a completed skip", async () => {
+  const fixture = persistenceFixture(async () => {
+    throw Error("Skips never call answer checking");
+  });
+  const results = await Promise.all(
+    Array.from({ length: 5 }, () =>
+      fixture.save({ skipped: true, givenAnswer: "" }),
+    ),
+  );
+  assert.ok(results.every((result) => result.directive === "skip"));
+  assert.equal(fixture.db.records.get(fixture.sessionPath).skipped, 1);
+  assert.equal(
+    fixture.db.records.get(fixture.attemptPath).submissions.length,
+    1,
+  );
+  await assert.rejects(
+    fixture.save({ skipped: true, givenAnswer: "", requestId: randomUUID() }),
+    { status: 409 },
+  );
+});
 test("recording judges the stored answer line and ignores forged scores, identities and answers", async () => {
   const fixture = persistenceFixture(async (endpoint, params) => {
     assert.equal(endpoint, "check-answer");
