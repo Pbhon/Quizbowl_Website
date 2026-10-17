@@ -258,7 +258,7 @@ fresh production build pass. See README.md for access and export behavior.
 - [x] **[Medium]** Create practice session records
 - [x] **[Medium]** Create assignments and progress collections
 - [x] **[Medium]** Create calendar and announcement collections
-- [ ] **[Medium]** Build Next.js API routes for QBReader
+- [x] **[Medium]** Build Next.js API routes for QBReader
 - [x] **[High]** Build server-side answer validation and attempt recording
 - [x] **[High]** Build secure AI generation endpoint
 - [x] **[High]** Build Anki export endpoint
