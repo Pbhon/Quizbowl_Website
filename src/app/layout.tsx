@@ -31,6 +31,9 @@ export default function RootLayout({
           </main>
           <footer className="mx-auto flex max-w-7xl flex-wrap justify-between gap-3 border-t px-5 py-6 text-sm text-muted-foreground sm:px-8">
             <span>QuizBowl · Learn a little more, every day.</span>
+            <a href="https://www.qbreader.org/" className="underline">
+              Questions via QBReader
+            </a>
             <span>{teamName}</span>
           </footer>
         </AuthProvider>

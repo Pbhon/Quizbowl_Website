@@ -267,10 +267,10 @@ fresh production build pass. See README.md for access and export behavior.
 - [x] **[High]** Protect API keys and admin credentials
 - [x] **[High]** Implement duplicate submission prevention
 - [x] **[High]** Handle student data privacy and retention
-- [ ] **[Medium]** Review QBReader question reuse and attribution requirements
+- [x] **[Medium]** Review QBReader question reuse and attribution requirements
 
-Task 12's eleven High subtasks are complete. All seven Medium subtasks are left
-unchecked as requested. Backend work reuses the secure history, answer recording,
+All Task 12 subtasks are complete after the follow-up verification of its seven
+Medium items. Backend work reuses the secure history, answer recording,
 Anki export and submission receipts from prior tasks; it adds a validated shared
 clue cache, explicit saved-card generation endpoint with leases/quotas, atomic UTC
 daily summaries, durable API limits, credential checks, personal data downloads,
