@@ -376,6 +376,9 @@ test("private/team visibility, owner-only edits, school isolation and revocation
     );
     // Even a stale directory pointer cannot grant access after unsharing.
     await directoryRef.set({ ownerUid: owner.uid, deckId });
+    // Establish the refresh precondition explicitly: navigating the owner's
+    // context can trigger a webpack development reload in the teammate's tab.
+    await peerPage.getByLabel("Show decks").selectOption("team");
     await peerPage.getByRole("button", { name: "Refresh decks" }).click();
     await expect(
       peerPage.getByRole("heading", { name: "School review" }),
