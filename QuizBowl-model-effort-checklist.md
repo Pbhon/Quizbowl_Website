@@ -255,7 +255,7 @@ fresh production build pass. See README.md for access and export behavior.
 - [x] **[Medium]** Create study deck and saved-card collections
 - [x] **[High]** Create AI-generated clue cache
 - [x] **[High]** Create daily statistics summaries
-- [ ] **[Medium]** Create practice session records
+- [x] **[Medium]** Create practice session records
 - [ ] **[Medium]** Create assignments and progress collections
 - [ ] **[Medium]** Create calendar and announcement collections
 - [ ] **[Medium]** Build Next.js API routes for QBReader
