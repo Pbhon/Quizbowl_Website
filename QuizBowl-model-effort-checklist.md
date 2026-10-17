@@ -259,7 +259,7 @@ fresh production build pass. See README.md for access and export behavior.
 - [ ] **[Medium]** Create assignments and progress collections
 - [ ] **[Medium]** Create calendar and announcement collections
 - [ ] **[Medium]** Build Next.js API routes for QBReader
-- [ ] **[High]** Build server-side answer validation and attempt recording
+- [x] **[High]** Build server-side answer validation and attempt recording
 - [ ] **[High]** Build secure AI generation endpoint
 - [ ] **[High]** Build Anki export endpoint
 - [ ] **[High]** Implement API caching and rate limiting

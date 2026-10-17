@@ -35,3 +35,11 @@ per day. Summary updates, markers, attempts, receipts, session totals and assign
 credit commit in one transaction. Prompts and retries add nothing. These server-only
 summaries start with this release; existing dashboards continue reading complete
 history to preserve historical coverage and the viewer's timezone.
+
+## Answer validation
+
+`POST /api/practice/attempts` verifies a non-revoked Firebase token, validates the
+session/part/reading position and loads the canonical stored judging answer.
+Unknown submitted identity, answer-line and scoring fields have no authority.
+Only accept/reject/prompt verdicts (or an explicit skip) are allowed. Upstream
+failures write nothing. Guest `/api/practice/check-answer` never awards saved credit.

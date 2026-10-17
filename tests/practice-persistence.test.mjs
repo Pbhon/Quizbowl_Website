@@ -450,6 +450,36 @@ test("UUID casing and whitespace normalize; legacy attempts gain a receipt witho
   );
   await assert.rejects(() => fixture.save({ part: 1 }), { status: 409 });
 });
+test("recording judges the stored answer line and ignores forged scores, identities and answers", async () => {
+  const fixture = persistenceFixture(async (endpoint, params) => {
+    assert.equal(endpoint, "check-answer");
+    assert.equal(params.get("answerline"), "John Smith [prompt on Smith]");
+    assert.equal(params.get("givenAnswer"), "John Smith");
+    return { directive: "reject" };
+  });
+  const result = await fixture.save({
+    uid: "victim",
+    answerline: "banana",
+    outcome: "correct",
+    score: 999,
+  });
+  assert.equal(result.directive, "reject");
+  assert.equal(fixture.db.records.get(fixture.sessionPath).incorrect, 1);
+  assert.equal(fixture.db.records.get(fixture.sessionPath).correct, 0);
+});
+test("upstream failures and invalid verdicts leave no attempt, receipt, summary or score", async () => {
+  for (const checker of [
+    async () => {
+      throw Error("Unavailable");
+    },
+    async () => ({ directive: "correct" }),
+  ]) {
+    const fixture = persistenceFixture(checker);
+    const before = [...fixture.db.records];
+    await assert.rejects(fixture.save());
+    assert.deepEqual([...fixture.db.records], before);
+  }
+});
 test("daily summaries commit once with final outcomes and count bonus parts as one question", async () => {
   const fixture = persistenceFixture(undefined, true);
   await Promise.all(Array.from({ length: 4 }, () => fixture.save()));
