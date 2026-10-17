@@ -250,7 +250,7 @@ roles. Unit, rules, desktop/mobile browser tests, lint, formatting, typecheck an
 fresh production build pass. See README.md for access and export behavior.
 
 ## 12. Firebase Database & Backend
-- [ ] **[Medium]** Create user profile collections
+- [x] **[Medium]** Create user profile collections
 - [x] **[High]** Create secure student attempt history collections
 - [ ] **[Medium]** Create study deck and saved-card collections
 - [x] **[High]** Create AI-generated clue cache
