@@ -23,6 +23,7 @@ import {
 import { defaultPreferences, type Preferences } from "@/lib/accounts";
 import { savePreferences } from "@/lib/firebase/profiles";
 import { accountError } from "@/lib/firebase/errors";
+import { AccountPrivacy } from "@/components/account-privacy";
 
 function PreferencesForm({ initial }: { initial: Preferences }) {
   const { user } = useAuth();
@@ -209,6 +210,14 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Privacy and your data</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AccountPrivacy key={user?.uid} />
+          </CardContent>
+        </Card>
         <VerificationPanel />
       </div>
     </AccountGuard>

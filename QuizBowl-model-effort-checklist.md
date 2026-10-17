@@ -266,8 +266,21 @@ fresh production build pass. See README.md for access and export behavior.
 - [x] **[High]** Implement Firestore security rules and role checks
 - [x] **[High]** Protect API keys and admin credentials
 - [x] **[High]** Implement duplicate submission prevention
-- [ ] **[High]** Handle student data privacy and retention
+- [x] **[High]** Handle student data privacy and retention
 - [ ] **[Medium]** Review QBReader question reuse and attribution requirements
+
+Task 12's eleven High subtasks are complete. All seven Medium subtasks are left
+unchecked as requested. Backend work reuses the secure history, answer recording,
+Anki export and submission receipts from prior tasks; it adds a validated shared
+clue cache, explicit saved-card generation endpoint with leases/quotas, atomic UTC
+daily summaries, durable API limits, credential checks, personal data downloads,
+deletion requests and an operator retention/erasure command. Generation requires
+private server opt-in and model/key configuration. Retention previews by default;
+operators choose a policy and process queued deletion requests. Nothing here runs
+production cleanup or installs a scheduler. See `docs/backend.md` for contracts,
+configuration and commands. Unit, rules, emulator transaction/cleanup and
+desktop/mobile browser checks pass; production validation uses webpack because
+this machine's Turbopack CSS worker fails to start.
 
 ## 13. Testing & Deployment
 - [ ] **[Medium]** Test student and admin authentication

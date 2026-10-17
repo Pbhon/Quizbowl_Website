@@ -28,8 +28,15 @@ export async function proxy(request: NextRequest) {
       )
         throw new ApiLimitError(403, "This request is not allowed.");
     }
-    const { db, auth } = getFirebaseAdmin();
     const authorization = request.headers.get("authorization");
+    const publicPaths = [
+      "/api/practice/questions",
+      "/api/practice/check-answer",
+      "/api/auth/admin-register",
+    ];
+    if (!authorization && !publicPaths.includes(request.nextUrl.pathname))
+      throw new ApiLimitError(401, "Sign in to continue.");
+    const { db, auth } = getFirebaseAdmin();
     let uid: string | null = null;
     if (authorization) {
       const token = authorization.match(/^Bearer (\S+)$/)?.[1];
@@ -48,11 +55,11 @@ export async function proxy(request: NextRequest) {
         error:
           error instanceof ApiLimitError
             ? error.message
-            : "The service is unavailable. Please retry.",
+            : "The service is unavailable or not configured. Please retry.",
         message:
           error instanceof ApiLimitError
             ? error.message
-            : "The service is unavailable. Please retry.",
+            : "The service is unavailable or not configured. Please retry.",
       },
       {
         status: error instanceof ApiLimitError ? error.status : 503,

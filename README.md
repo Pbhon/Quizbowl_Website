@@ -1,5 +1,10 @@
 # QuizBowl team workspace
 
+Task 12's High backend items are implemented; its Medium items remain unchecked
+as requested. See [backend contracts and operations](docs/backend.md) for the
+clue-generation configuration, API quotas, collections, privacy export, deletion
+processing and retention command. Generation is disabled until explicitly configured.
+
 Sections 1 and 2 of `QuizBowl-model-effort-checklist.md` are implemented:
 Next.js, TypeScript, Tailwind/shadcn, Firebase accounts, private profiles,
 student registration, staff login, role permissions, automatic school membership,

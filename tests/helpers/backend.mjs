@@ -15,7 +15,7 @@ export function loadBackend(filename, mocks = {}, globals = {}) {
       ts.transpileModule(readFileSync(absolute, "utf8"), {
         compilerOptions: {
           module: ts.ModuleKind.CommonJS,
-          target: ts.ScriptTarget.ES2022,
+          target: ts.ScriptTarget.ES2016,
         },
       }).outputText,
       {
@@ -41,6 +41,9 @@ export function loadBackend(filename, mocks = {}, globals = {}) {
         setTimeout,
         clearTimeout,
         structuredClone,
+        // The Firestore SDK checks instanceof Promise. Downlevel async above
+        // so transpiled test modules use the host Promise across VM boundaries.
+        Promise,
         fetch: (...args) => fetch(...args),
         process: { env: {} },
         ...globals,

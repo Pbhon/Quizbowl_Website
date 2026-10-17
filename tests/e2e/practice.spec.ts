@@ -224,7 +224,9 @@ test("skipped questions do not enter answered history", async ({ page }) => {
   ).toBeNull();
 });
 
-test("practice endpoints reject invalid input", async ({ request }) => {
+test("practice endpoints reject invalid input or fail closed without backend configuration", async ({
+  request,
+}) => {
   const questions = await request.post("/api/practice/questions", {
     data: {
       type: "tossup",
@@ -236,11 +238,12 @@ test("practice endpoints reject invalid input", async ({ request }) => {
       excluded: [],
     },
   });
-  expect(questions.status()).toBe(400);
+  const expected = process.env.E2E_FIREBASE === "true" ? 400 : 503;
+  expect(questions.status()).toBe(expected);
   const answer = await request.post("/api/practice/check-answer", {
     data: { answerline: "mitochondria", givenAnswer: " " },
   });
-  expect(answer.status()).toBe(400);
+  expect(answer.status()).toBe(expected);
 });
 
 test("live QBReader routes fetch both types, filter topics and judge answers", async ({

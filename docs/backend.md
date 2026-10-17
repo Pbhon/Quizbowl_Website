@@ -91,11 +91,13 @@ Firestore fixed-window quota before forwarding. Failures are closed with safe JS
 Identity comes from the verified token, never forwarded IP/user headers. Anonymous
 traffic shares a deployment-wide bucket per operation; sign in for individual limits.
 
-Per-minute limits: question batches 30 per account / 20 anonymous; answers 180 per
+Per-minute limits: account data operations 3; question batches 30 per account / 20 anonymous; answers 180 per
 account / 60 anonymous; Anki exports 6; generation 10; administrator registrations
 20; other operations 120 per account / 30 anonymous. Signup's existing validated-code
 hourly limit also remains. Limits return 429 and Retry-After; unavailable quota
 storage returns 503. Hash-only bucket records expire after ten minutes via maintenance.
+Even guest upstream requests require a configured backend for the durable limiter;
+protected endpoints without a token return 401 before accessing Firebase.
 The fixed window allows bursts at minute boundaries. All API responses are private
 and uncached. Verified routes still perform their own authorization checks.
 
@@ -142,3 +144,68 @@ simultaneous skips, prompt replay after clarification, legacy receipts and separ
 intentional practice sessions have explicit regression coverage. Retain submission
 receipts at least as long as their canonical session; maintenance deletes whole
 expired sessions and their attempts/receipts together to preserve this guarantee.
+
+## Privacy, exports and retention
+
+Settings explains private answers/decks, staff statistics, sharing and the exact
+original-source data sent for explicit AI generation. `GET /api/account/data`
+downloads the authenticated user's Firebase account details, complete nested user
+records, own staff/membership records, own assignment progress and own RSVPs,
+including surviving personal records from former schools. It never exports other
+students' records or accepts a caller-selected UID/path. Exports cap at 5,000 records
+and 16 MiB; larger exports require an operator-assisted export from Firebase.
+The downloaded JSON preserves Firestore's serialized timestamp representation.
+
+Both download and deletion requests require authentication within five minutes.
+The settings form reauthenticates with the current password and clears it after
+success. `POST /api/account/data` accepts only `{ "action": "request-deletion" }`
+and idempotently queues `privacyJobs/{authenticatedUid}`. An inline confirmation
+states that the operator must process the request and that data is retained until
+processing completes. This request never erases data immediately or emails anyone.
+
+The trusted maintenance command previews changes by default. The operator selects
+the project and a school-approved retention duration (30–3,650 days); no destructive
+retention duration is silently selected. For example, to preview a **365-day** policy
+and pending deletion jobs, substitute the intended Firebase project ID:
+
+```powershell
+node --env-file=.env.local scripts/data-maintenance.mjs --project YOUR_PROJECT_ID --retention-days 365 --deletions
+```
+
+Review the counts, then add `--apply` to perform those operations. Local demo
+testing requires `--project demo-quizbowl --emulator`. The command rejects accidental
+emulator use against a live project and mismatched server project configuration.
+It logs counts and phases without credentials, user IDs, answers or names.
+
+Retention removes inactive sessions older than the selected cutoff, their canonical
+questions, attempts and submission receipts, and old daily summaries/question markers
+and study reviews. It transactionally rechecks activity and closes the canonical
+session first, so concurrent attempts cannot resurrect it. Prompts update session
+activity too. Interrupted cleanup is recoverable on the next run. Active/recent
+sessions, saved decks, assignment credit, profiles and school content are retained.
+Dashboards based on history then reflect the retained history window. Expired API
+buckets and 32-day AI quota records are removed even when no history duration is set.
+Shared clue-cache entries contain only source-derived content and are retained for
+reuse. No Firestore TTL deployment or new index is required by this command.
+
+Deletion processing first disables Firebase Auth and revokes refresh tokens, marks
+the job deleting, and waits **65 minutes** for existing direct Firestore ID tokens
+and in-flight requests to expire. A later maintenance run erases the user's entire
+nested tree, staff and legacy memberships, school memberships, share pointers,
+assignment progress/receipts and recipient IDs, RSVPs, and source-owner references
+in shared-study review receipts. It removes the UID from school author metadata,
+deletes the Auth account, and removes the job. It checks the account remains disabled
+before erasing; failed runs can resume. School-owned authored content, independent
+copies in other accounts, downloaded exports and provider backups are outside this
+erasure path. Operators must review free-text mentions and apply their own backup
+retention policies.
+
+Run maintenance on the operator's chosen schedule and monitor its exit status;
+this task does not install a scheduler or run cleanup against production. Without
+an operator run, history is retained and deletion requests remain queued. To process
+only quota expiry, omit `--retention-days` and `--deletions`.
+
+Validation: `pnpm test:backend`, `pnpm test:backend:emulator`, `pnpm test:practice`,
+`pnpm test:rules`, and the desktop/mobile `tests/e2e/backend.spec.ts`. Set
+`E2E_FIREBASE=true` and `E2E_WEBPACK=true` for emulator browser tests using webpack;
+set `E2E_BROWSER_PATH` if using an installed Chrome instead of Playwright Chromium.

@@ -49,7 +49,7 @@ export async function authenticatePractice(request: Request, required = true) {
   const { auth, db } = services;
   try {
     const account = await auth.verifyIdToken(token, true);
-    return { uid: account.uid, db };
+    return { uid: account.uid, db, authTime: account.auth_time || 0 };
   } catch {
     throw new PracticeError("Your session expired. Sign in again.", 401);
   }
@@ -372,7 +372,7 @@ export async function savePracticeAttempt(
           ? { completedAt: timestamp }
           : {}),
       });
-    }
+    } else transaction.update(sessionRef, { updatedAt: timestamp });
     return result(submission, attemptId);
   });
 }

@@ -145,3 +145,20 @@ test("durable daily quotas prevent provider calls and stale leases can recover",
   await f.generate();
   assert.equal(f.calls(), 2);
 });
+
+test("deleting a saved card during generation never recreates it on delivery", async () => {
+  let f;
+  f = fixture(async () => {
+    f.db.records.delete("users/one/decks/deck/questions/card");
+    return Response.json({
+      candidates: [
+        {
+          finishReason: "STOP",
+          content: { parts: [{ text: JSON.stringify([clue]) }] },
+        },
+      ],
+    });
+  });
+  await assert.rejects(f.generate(), { status: 404 });
+  assert.equal(f.db.records.has("users/one/decks/deck/questions/card"), false);
+});
