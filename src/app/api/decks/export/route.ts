@@ -15,7 +15,15 @@ export async function POST(request: Request) {
     if (text.length > 4096)
       throw new PracticeError("Export request too large.", 413);
     const body = JSON.parse(text);
-    if (!body || typeof body !== "object" || Array.isArray(body))
+    if (
+      !body ||
+      typeof body !== "object" ||
+      Array.isArray(body) ||
+      Object.keys(body).some(
+        (key) => !["deckId", "sharedId", "options"].includes(key),
+      ) ||
+      (body.deckId !== undefined && body.sharedId !== undefined)
+    )
       throw new PracticeError("Invalid export request.", 400);
     const options: ExportOptions = body.options || {};
     if (

@@ -72,3 +72,12 @@ an upstream service cannot guarantee exactly-once billing after network failure.
 This backend endpoint does not complete Task 7's generation UI or the skipped
 Medium free-tier integration/configuration item. No ordinary fetch, answer, export
 or answer-reveal path invokes generation.
+
+## Anki endpoint
+
+`POST /api/decks/export` exports a single owned deck or currently authorized school
+share, never a caller-selected owner. Conflicting sources and unknown scope fields
+are rejected. Filters and request size are validated before package generation;
+exports are limited to 5,000 notes / 16 MiB of row data. Responses are private,
+uncached attachments and failures hide filesystem/provider details. Existing Anki
+package and import suites cover official answers, formatting and stable identities.
