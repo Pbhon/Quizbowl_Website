@@ -17,3 +17,11 @@ authenticated owner's collection.
 Validation: history and practice-persistence unit suites cover owner-scoped reads,
 input validation, clarification trails and atomic recording. The Firestore rules
 suite exercises owner reads, forgery, mutation, deletion and cross-account denial.
+
+## Clue cache
+
+`aiClueCache/{sha256}` is server-only. Keys bind prompt version, configured model,
+question type/ID, complete original text and official answers. Validated identifier
+cards bind to an original part and verbatim excerpt. The model cannot replace the
+official answer. Cache documents contain no student answers, notes, tags or IDs.
+The generation service below owns cache states and concurrency leases.

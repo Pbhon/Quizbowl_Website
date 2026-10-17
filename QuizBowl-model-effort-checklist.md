@@ -253,7 +253,7 @@ fresh production build pass. See README.md for access and export behavior.
 - [ ] **[Medium]** Create user profile collections
 - [x] **[High]** Create secure student attempt history collections
 - [ ] **[Medium]** Create study deck and saved-card collections
-- [ ] **[High]** Create AI-generated clue cache
+- [x] **[High]** Create AI-generated clue cache
 - [ ] **[High]** Create daily statistics summaries
 - [ ] **[Medium]** Create practice session records
 - [ ] **[Medium]** Create assignments and progress collections
