@@ -1,6 +1,12 @@
 # Backend collections and operations
 
-Task 12 covers the High items only. Existing feature collections are reused.
+Task 12 is complete, including the seven Medium items verified in the follow-up.
+Existing feature collections are reused: owner profiles, decks and saved cards,
+practice sessions, school assignments and progress, calendar events and
+announcements. The accounts, decks, practice-persistence, assignments, calendar,
+Firestore rules and browser suites cover their access boundaries and persistence.
+QBReader retrieval and answer checks run through server API routes; reuse and
+attribution requirements are documented in [question-attribution.md](question-attribution.md).
 
 ## Attempt history
 
