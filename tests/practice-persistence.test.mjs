@@ -62,6 +62,16 @@ function load(
           },
         ));
       if (id === "server-only") return {};
+      if (id === "./daily-statistics")
+        return support("src/lib/server/daily-statistics.ts", {
+          "server-only": {},
+          "firebase-admin/firestore": {
+            FieldValue: {
+              serverTimestamp: () => "server-time",
+              increment: (increment) => ({ increment }),
+            },
+          },
+        });
       if (id === "node:crypto") return { randomUUID };
       if (id === "firebase-admin/firestore")
         return {
@@ -227,7 +237,12 @@ function memoryFirestore(initial, retryCallback = false) {
               return getAll(...refs);
             },
             create: (ref, data) => writes.push({ kind: "create", ref, data }),
-            set: (ref, data) => writes.push({ kind: "set", ref, data }),
+            set: (ref, data, options) =>
+              writes.push({
+                kind: options?.merge ? "update" : "set",
+                ref,
+                data,
+              }),
             update: (ref, data) => writes.push({ kind: "update", ref, data }),
             commit: () => {
               for (const { kind, ref, data } of writes) {
@@ -434,6 +449,33 @@ test("UUID casing and whitespace normalize; legacy attempts gain a receipt witho
     1,
   );
   await assert.rejects(() => fixture.save({ part: 1 }), { status: 409 });
+});
+test("daily summaries commit once with final outcomes and count bonus parts as one question", async () => {
+  const fixture = persistenceFixture(undefined, true);
+  await Promise.all(Array.from({ length: 4 }, () => fixture.save()));
+  await fixture.save({
+    part: 1,
+    requestId: randomUUID(),
+    skipped: true,
+    givenAnswer: "",
+  });
+  const summaries = [...fixture.db.records].filter(([key]) =>
+    /\/dailyStatistics\/[^/]+$/.test(key),
+  );
+  assert.equal(summaries.length, 1);
+  const summary = summaries[0][1];
+  assert.equal(summary.responses, 2);
+  assert.equal(summary.questions, 1);
+  assert.equal(summary.correct, 1);
+  assert.equal(summary.skipped, 1);
+  const prompt = persistenceFixture(async () => ({ directive: "prompt" }));
+  await prompt.save();
+  assert.equal(
+    [...prompt.db.records.keys()].some((key) =>
+      key.includes("/dailyStatistics/"),
+    ),
+    false,
+  );
 });
 function assignmentFixture(checker, retry = true) {
   const fixture = persistenceFixture(checker, retry);

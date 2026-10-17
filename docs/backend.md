@@ -25,3 +25,13 @@ question type/ID, complete original text and official answers. Validated identif
 cards bind to an original part and verbatim excerpt. The model cannot replace the
 official answer. Cache documents contain no student answers, notes, tags or IDs.
 The generation service below owns cache states and concurrency leases.
+
+## Daily statistics
+
+`users/{uid}/dailyStatistics/{YYYY-MM-DD}` stores UTC day, schema version,
+responses, distinct session questions and correct/incorrect/skipped counts.
+Missing outcome fields mean zero. Nested question markers deduplicate bonus parts
+per day. Summary updates, markers, attempts, receipts, session totals and assignment
+credit commit in one transaction. Prompts and retries add nothing. These server-only
+summaries start with this release; existing dashboards continue reading complete
+history to preserve historical coverage and the viewer's timezone.

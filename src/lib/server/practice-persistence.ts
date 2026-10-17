@@ -4,6 +4,7 @@ import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { getFirebaseAdmin } from "@/lib/firebase/admin";
 import type { Question, Outcome } from "@/lib/practice";
 import { qbreader } from "@/lib/server/qbreader";
+import { prepareDailyStatistics } from "./daily-statistics";
 import {
   prepareAssignmentCredit,
   type AssignmentBinding,
@@ -331,7 +332,16 @@ export async function savePracticeAttempt(
       input.part,
       outcome,
     );
+    const writeDailyStatistics = await prepareDailyStatistics(
+      db,
+      transaction,
+      uid,
+      input.sessionId,
+      input.questionIndex,
+      outcome,
+    );
     const timestamp = FieldValue.serverTimestamp();
+    writeDailyStatistics();
     writeAssignmentCredit();
     transaction.create(receiptRef, {
       input: submissionBinding(input),
