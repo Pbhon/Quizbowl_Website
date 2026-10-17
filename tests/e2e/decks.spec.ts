@@ -9,6 +9,54 @@ if (enabled) {
   process.env.FIREBASE_AUTH_EMULATOR_HOST = "127.0.0.1:9099";
   process.env.FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080";
 }
+test("deck exports reject invalid filters and empty matches", async ({
+  request,
+}) => {
+  test.skip(!enabled, "Requires Firebase emulators");
+  const app =
+    getApps().find((app) => app.name === "deck-tests") ||
+    initializeApp({ projectId: "demo-quizbowl" }, "deck-tests");
+  const auth = getAuth(app),
+    db = getFirestore(app);
+  // Keep validation independent of the UI test's export quota. The backend
+  // browser suite separately verifies that a seventh request receives 429.
+  const password = "quizbowl-test-123";
+  const user = await auth.createUser({
+    email: `export-filters-${crypto.randomUUID()}@example.com`,
+    password,
+  });
+  try {
+    await db.doc(`users/${user.uid}/decks/filters`).set({ name: "Filters" });
+    const login = await request.post(
+      "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=demo-api-key",
+      { data: { email: user.email, password, returnSecureToken: true } },
+    );
+    const headers = { Authorization: `Bearer ${(await login.json()).idToken}` };
+    for (const options of [
+      { difficulty: 0 },
+      { difficulty: "11" },
+      { complexity: "invalid" },
+    ]) {
+      const response = await request.post("/api/decks/export", {
+        headers,
+        data: { deckId: "filters", options },
+      });
+      expect(response.status()).toBe(400);
+      expect((await response.json()).error).toBe("Invalid export filters.");
+    }
+    const noMatches = await request.post("/api/decks/export", {
+      headers,
+      data: { deckId: "filters", options: { difficulty: "0" } },
+    });
+    expect(noMatches.status()).toBe(400);
+    expect((await noMatches.json()).error).toBe(
+      "No saved cards match the export filters.",
+    );
+  } finally {
+    await db.recursiveDelete(db.doc(`users/${user.uid}`));
+    await auth.deleteUser(user.uid);
+  }
+});
 test("decks: topic import, stars, multiple destinations, edits, flashcards and ownership", async ({
   page,
 }, info) => {
@@ -295,25 +343,6 @@ test("decks: topic import, stars, multiple destinations, edits, flashcards and o
         })
       ).status(),
     ).toBe(401);
-    for (const options of [
-      { difficulty: 0 },
-      { difficulty: "11" },
-      { complexity: "invalid" },
-    ]) {
-      expect(
-        (
-          await page.request.post("/api/decks/export", {
-            headers,
-            data: { deckId: cell.id, options },
-          })
-        ).status(),
-      ).toBe(400);
-    }
-    const noMatches = await page.request.post("/api/decks/export", {
-      headers,
-      data: { deckId: cell.id, options: { difficulty: "0" } },
-    });
-    expect(noMatches.status()).toBe(400);
     const outsider = `other-${user.uid}`;
     await db
       .doc(`users/${outsider}/decks/foreign-deck`)
@@ -321,9 +350,14 @@ test("decks: topic import, stars, multiple destinations, edits, flashcards and o
     try {
       const foreignExport = await page.request.post("/api/decks/export", {
         headers,
-        data: { deckId: "foreign-deck", uid: outsider },
+        data: { deckId: "foreign-deck" },
       });
       expect(foreignExport.status()).toBe(404);
+      const forgedExport = await page.request.post("/api/decks/export", {
+        headers,
+        data: { deckId: "foreign-deck", uid: outsider },
+      });
+      expect(forgedExport.status()).toBe(400);
       for (const action of ["update", "delete", "editCard", "removeCard"]) {
         const response = await page.request.post("/api/decks", {
           headers,
