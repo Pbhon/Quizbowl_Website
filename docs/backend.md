@@ -81,3 +81,26 @@ are rejected. Filters and request size are validated before package generation;
 exports are limited to 5,000 notes / 16 MiB of row data. Responses are private,
 uncached attachments and failures hide filesystem/provider details. Existing Anki
 package and import suites cover official answers, formatting and stable identities.
+
+## API limits and caching
+
+Next.js `src/proxy.ts` covers every `/api/*` route. It checks same-origin requests,
+counts streamed bodies up to 2 MiB (individual routes can impose smaller limits),
+verifies supplied Firebase tokens with revocation checking, and reserves a durable
+Firestore fixed-window quota before forwarding. Failures are closed with safe JSON.
+Identity comes from the verified token, never forwarded IP/user headers. Anonymous
+traffic shares a deployment-wide bucket per operation; sign in for individual limits.
+
+Per-minute limits: question batches 30 per account / 20 anonymous; answers 180 per
+account / 60 anonymous; Anki exports 6; generation 10; administrator registrations
+20; other operations 120 per account / 30 anonymous. Signup's existing validated-code
+hourly limit also remains. Limits return 429 and Retry-After; unavailable quota
+storage returns 503. Hash-only bucket records expire after ten minutes via maintenance.
+The fixed window allows bursts at minute boundaries. All API responses are private
+and uncached. Verified routes still perform their own authorization checks.
+
+Deterministic QBReader verdicts are reused for 60 seconds in a bounded 500-entry
+process cache, with concurrent request coalescing. Keys hash inputs; cached values
+are copied and errors/invalid verdicts are not cached. This cache is best-effort
+per instance. Random question draws are never cached. Durable AI content caching
+and generation quotas are independent of this optimization.
