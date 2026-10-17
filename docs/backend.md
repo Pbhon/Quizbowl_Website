@@ -104,3 +104,14 @@ process cache, with concurrent request coalescing. Keys hash inputs; cached valu
 are copied and errors/invalid verdicts are not cached. This cache is best-effort
 per instance. Random question draws are never cached. Durable AI content caching
 and generation quotas are independent of this optimization.
+
+## Rules and roles
+
+The rules allow only validated owner profile writes, owner history reads, and
+limited current-school roster access. All other client access is denied by default,
+including new caches, quotas, summary markers and privacy jobs. Even verified admins
+cannot directly edit these collections. Server endpoints validate Firebase identity
+and load current staff/membership records; teacher/admin roles never come from
+browser profile data. Rules tests cover anonymous users, owners, other students,
+verified staff, forged roles, other schools and all new server-only collections.
+No new allow rules or deployed indexes are needed for the new backend collections.

@@ -42,6 +42,39 @@ const profile = () => ({
 });
 const ownerDb = () => env.authenticatedContext("student-one").firestore();
 
+test("backend cache, quotas, daily summaries and privacy controls are denied to every client role", async () => {
+  const paths = [
+    "aiClueCache/content",
+    "aiGenerationUsage/day",
+    "apiRateLimits/hash",
+    "users/student-one/aiUsage/day",
+    "users/student-one/dailyStatistics/2026-10-17",
+    "users/student-one/dailyStatistics/2026-10-17/questions/one",
+    "privacyJobs/student-one",
+    "retentionRuns/run",
+  ];
+  await env.withSecurityRulesDisabled(async (context) => {
+    for (const path of paths)
+      await setDoc(doc(context.firestore(), path), { count: 1 });
+    await setDoc(doc(context.firestore(), "staff/admin"), {
+      teamId: "team",
+      role: "admin",
+    });
+  });
+  for (const db of [
+    env.unauthenticatedContext().firestore(),
+    ownerDb(),
+    env.authenticatedContext("other").firestore(),
+    env.authenticatedContext("admin", { email_verified: true }).firestore(),
+  ]) {
+    for (const path of paths) {
+      await assertFails(getDoc(doc(db, path)));
+      await assertFails(setDoc(doc(db, path), { count: 999 }));
+      await assertFails(deleteDoc(doc(db, path)));
+    }
+  }
+});
+
 const verifiedDb = (
   uid = "student-one",
   email = "student@example.com",

@@ -48,6 +48,10 @@ service cloud.firestore {
           && request.resource.data.displayName == getAfter(/databases/$(database)/documents/users/$(uid)).data.displayName;
       }
     }
+    // Server-only: sessions/questions, receipts, dailyStatistics (and markers),
+    // aiClueCache, aiUsage, aiGenerationUsage, apiRateLimits, retention controls,
+    // decks, assignment progress, calendar events, and announcements.
+    // Admin SDK callers must enforce current authorization in their transactions.
     match /{document=**} { allow read, write: if false; }
   }
 }

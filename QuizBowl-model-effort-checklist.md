@@ -263,7 +263,7 @@ fresh production build pass. See README.md for access and export behavior.
 - [x] **[High]** Build secure AI generation endpoint
 - [x] **[High]** Build Anki export endpoint
 - [x] **[High]** Implement API caching and rate limiting
-- [ ] **[High]** Implement Firestore security rules and role checks
+- [x] **[High]** Implement Firestore security rules and role checks
 - [ ] **[High]** Protect API keys and admin credentials
 - [ ] **[High]** Implement duplicate submission prevention
 - [ ] **[High]** Handle student data privacy and retention
