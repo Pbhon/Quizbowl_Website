@@ -124,7 +124,10 @@ export async function generateSavedClues(
       const generated = identifiers;
       await db.runTransaction(async (tx) => {
         const current = await tx.get(cache);
-        if (current.data()?.token !== token)
+        if (
+          current.data()?.token !== token ||
+          current.data()!.leaseUntil <= Date.now()
+        )
           throw new PracticeError("Generation expired. Retry.", 409);
         tx.set(cache, {
           status: "completed",

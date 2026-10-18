@@ -37,6 +37,84 @@ function fixture() {
   });
   return { uid, other, teamId, server };
 }
+
+test("real Firestore concurrent students reserve one generation lease and reuse its result", async () => {
+  const { uid, other } = fixture();
+  const model = `test-${randomUUID()}`;
+  const question = {
+    id: randomUUID(),
+    type: "tossup",
+    leadin: "",
+    parts: ["This molecule has a double helix."],
+    answers: ["DNA"],
+    answerLines: ["DNA"],
+  };
+  const clue = {
+    clue: "Name the double-helix molecule.",
+    part: 0,
+    complexity: "simple",
+    sourceExcerpt: "double helix",
+  };
+  for (const owner of [uid, other]) {
+    await db.doc(`users/${owner}/decks/deck`).set({ name: "Deck" });
+    await db.doc(`users/${owner}/decks/deck/questions/card`).set({ question });
+  }
+  let calls = 0;
+  const server = loadBackend(
+    "src/lib/server/ai-generation.ts",
+    {},
+    {
+      process: {
+        env: {
+          GEMINI_API_KEY: "test-only",
+          GEMINI_MODEL: model,
+          GEMINI_GENERATION_ENABLED: "true",
+        },
+      },
+      fetch: async () => {
+        calls++;
+        return Response.json({
+          candidates: [
+            {
+              finishReason: "STOP",
+              content: { parts: [{ text: JSON.stringify([clue]) }] },
+            },
+          ],
+        });
+      },
+    },
+  );
+  const { clueCacheKey } = loadBackend("src/lib/server/clue-cache.ts");
+  roots.add(`aiClueCache/${clueCacheKey(question, model)}`);
+  const results = await Promise.allSettled(
+    Array.from({ length: 6 }, (_, index) =>
+      server.generateSavedClues(
+        db,
+        index % 2 ? uid : other,
+        "deck",
+        "card",
+        true,
+      ),
+    ),
+  );
+  assert.ok(results.some((result) => result.status === "fulfilled"));
+  assert.equal(calls, 1);
+  for (const owner of [uid, other])
+    assert.equal(
+      (await server.generateSavedClues(db, owner, "deck", "card", true)).cached,
+      true,
+    );
+  assert.equal(calls, 1);
+  const day = new Date().toISOString().slice(0, 10);
+  const quotas = await db.getAll(
+    db.doc(`users/${uid}/aiUsage/${day}`),
+    db.doc(`users/${other}/aiUsage/${day}`),
+  );
+  assert.equal(
+    quotas.reduce((sum, doc) => sum + (doc.data()?.count || 0), 0),
+    1,
+  );
+});
 test("account exports include nested owner records and own school progress but exclude other accounts", async () => {
   const { uid, other, teamId, server } = fixture();
   const owned = [

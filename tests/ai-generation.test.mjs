@@ -227,3 +227,35 @@ test("cross-student cache reuse never copies personal edits or restores removed 
   assert.ok(!JSON.stringify(shared).includes("personal"));
   assert.ok(!JSON.stringify(shared).includes("private note"));
 });
+
+test("a fenced worker cannot overwrite a replacement cache or mark it failed", async () => {
+  let f;
+  f = fixture(() => {
+    const key = [...f.db.records.keys()].find((key) =>
+      key.startsWith("aiClueCache/"),
+    );
+    f.db.records.set(key, {
+      status: "completed",
+      token: "replacement",
+      identifiers: [clue],
+    });
+    return Response.json({
+      candidates: [
+        {
+          finishReason: "STOP",
+          content: { parts: [{ text: JSON.stringify([clue]) }] },
+        },
+      ],
+    });
+  });
+  await assert.rejects(f.generate(), { status: 409 });
+  const saved = [...f.db.records].find(([path]) =>
+    path.startsWith("aiClueCache/"),
+  )[1];
+  assert.equal(saved.status, "completed");
+  assert.equal(saved.token, "replacement");
+  assert.equal(
+    f.db.records.get("users/one/decks/deck/questions/card").identifiers,
+    undefined,
+  );
+});

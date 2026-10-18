@@ -138,7 +138,7 @@ Questions stays private. No AI generation is added.
 - [x] **[Low]** Allow students to preview and edit generated cards
 - [x] **[Low]** Allow students to remove inaccurate clues
 - [x] **[High]** Cache generated clues for reuse across students
-- [ ] **[High]** Prevent simultaneous duplicate AI generation requests
+- [x] **[High]** Prevent simultaneous duplicate AI generation requests
 - [ ] **[Medium]** Track generation status: pending, generating, completed, failed
 - [ ] **[High]** Handle API rate limits and generation failures
 - [ ] **[High]** Set per-student AI generation quotas
