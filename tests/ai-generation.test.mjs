@@ -50,6 +50,10 @@ function fixture(fetcher, env = {}) {
           "array",
         );
         assert.equal(body.generationConfig.maxOutputTokens, 4096);
+        assert.match(
+          body.systemInstruction.parts[0].text,
+          /simple giveaway identifiers/,
+        );
         assert.equal(init.cache, "no-store");
         assert.ok(init.signal instanceof AbortSignal);
         assert.equal(init.headers["x-goog-api-key"], "private-test-key");
