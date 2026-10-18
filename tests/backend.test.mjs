@@ -132,3 +132,23 @@ test("each bonus clue reveals its own original official answer regardless of stu
     original.answerLines[1],
   );
 });
+
+test("source verification rejects paraphrases and excerpts from a different bonus part", () => {
+  const source = {
+    ...question,
+    parts: ["This molecule has a double helix.", "This molecule uses uracil."],
+    answerLines: ["DNA", "RNA"],
+  };
+  const clue = {
+    clue: "Which molecule uses uracil?",
+    part: 1,
+    complexity: "simple",
+    sourceExcerpt: "uses uracil",
+  };
+  assert.equal(
+    cache.validateClues([clue], source)[0].sourceExcerpt,
+    "uses uracil",
+  );
+  for (const change of [{ part: 0 }, { sourceExcerpt: "contains uracil" }])
+    assert.throws(() => cache.validateClues([{ ...clue, ...change }], source));
+});

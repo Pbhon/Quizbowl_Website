@@ -55,6 +55,18 @@ export function GeneratedClues({
               {identifierAnswer(card, clue)}
             </p>
           </details>
+          <details>
+            <summary className="cursor-pointer text-sm">
+              Verify source excerpt
+            </summary>
+            <blockquote className="border-l-2 pl-3 whitespace-pre-wrap break-words">
+              {clue.sourceExcerpt}
+            </blockquote>
+            <p className="text-xs text-muted-foreground">
+              Part {clue.part + 1} ·{" "}
+              {card.originalQuestion.source || "QBReader database"}
+            </p>
+          </details>
         </article>
       ))}
       <p className="text-sm">
