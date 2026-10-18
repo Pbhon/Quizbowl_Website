@@ -84,3 +84,26 @@ test("complex early-buzzer identifiers preserve specialized opening evidence", (
   assert.equal(card.complexity, "complex");
   assert.equal(card.part, 0);
 });
+
+test("flashcards reject context-dependent fronts and cosmetic duplicates", () => {
+  const clue = {
+    clue: "Name the double-helix molecule.",
+    part: 0,
+    complexity: "simple",
+    sourceExcerpt: "double helix",
+  };
+  for (const front of [
+    "Name it",
+    "What molecule is in the above passage?",
+    "Identify this clue's subject.",
+  ])
+    assert.throws(() =>
+      cache.validateClues([{ ...clue, clue: front }], question),
+    );
+  assert.throws(() =>
+    cache.validateClues(
+      [clue, { ...clue, clue: "NAME THE DOUBLE HELIX MOLECULE!" }],
+      question,
+    ),
+  );
+});

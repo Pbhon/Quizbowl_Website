@@ -131,7 +131,7 @@ Questions stays private. No AI generation is added.
 - [x] **[Medium]** Generate simple/giveaway identifiers
 - [x] **[Medium]** Generate intermediate identifiers
 - [x] **[Medium]** Generate complex/early-buzzer identifiers
-- [ ] **[High]** Convert individual clues into self-contained flashcards
+- [x] **[High]** Convert individual clues into self-contained flashcards
 - [ ] **[High]** Preserve the official QBReader answer line for each clue
 - [ ] **[High]** Include original source excerpts for verification
 - [ ] **[Medium]** Classify clues by complexity

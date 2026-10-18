@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import type { Question } from "@/lib/practice";
 import type { IdentifierCard } from "@/lib/decks";
 
-export const clueVersion = "clues-v4-complex";
+export const clueVersion = "clues-v5";
 export function clueCacheKey(question: Question, model: string) {
   // Include content, not just upstream IDs: edited upstream questions must miss.
   return createHash("sha256")
@@ -33,7 +33,10 @@ export function validateClues(
       !item ||
       typeof item !== "object" ||
       typeof item.clue !== "string" ||
-      !item.clue.trim() ||
+      item.clue.trim().length < 12 ||
+      /\b(above passage|previous (?:question|clue|answer)|aforementioned|this (?:passage|clue))\b/i.test(
+        item.clue,
+      ) ||
       item.clue.length > 1000 ||
       !["simple", "intermediate", "complex"].includes(item.complexity) ||
       !Number.isInteger(item.part) ||
@@ -50,8 +53,9 @@ export function validateClues(
       .update(JSON.stringify([item.part, clue]))
       .digest("hex")
       .slice(0, 24);
-    if (seen.has(id)) throw new Error("Duplicate generated clue.");
-    seen.add(id);
+    const identity = `${item.part}:${clue.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "")}`;
+    if (seen.has(identity)) throw new Error("Duplicate generated clue.");
+    seen.add(identity);
     // Never accept a model-provided answer. Exports bind part to official answers.
     return {
       id,
