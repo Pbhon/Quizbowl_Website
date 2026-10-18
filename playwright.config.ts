@@ -42,6 +42,10 @@ export default defineConfig({
       NEXT_PUBLIC_TEAM_NAME: "Test High School",
       ADMIN_SIGNUP_TEAM_ID: firebase ? "team-e2e" : "",
       FIREBASE_ADMIN_PROJECT_ID: firebase ? "demo-quizbowl" : "",
+      // Browser tests exercise cached delivery only; a miss can never call Gemini.
+      GEMINI_MODEL: firebase ? "test-browser-model" : "",
+      GEMINI_API_KEY: "",
+      GEMINI_GENERATION_ENABLED: "false",
     },
   },
 });

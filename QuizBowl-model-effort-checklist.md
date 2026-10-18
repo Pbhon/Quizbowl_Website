@@ -120,7 +120,7 @@ share with their configured school and revoke sharing. Current school members
 can study shared decks and copy original cards to their own decks. Shared reads
 and copies check membership and live visibility transactionally. Sharing,
 revocation, and deletion update the school directory atomically. Starred
-Questions stays private. No AI generation is added.
+Questions stays private. Optional AI generation is covered in Task 7.
 
 ## 7. AI Identifier & Flashcard Generation
 - [x] **[Medium]** Integrate Gemini API free tier
@@ -142,7 +142,21 @@ Questions stays private. No AI generation is added.
 - [x] **[Medium]** Track generation status: pending, generating, completed, failed
 - [x] **[High]** Handle API rate limits and generation failures
 - [x] **[High]** Set per-student AI generation quotas
-- [ ] **[High]** Support manual retry or regeneration when needed
+- [x] **[High]** Support manual retry or regeneration when needed
+
+All twenty Task 7 subtasks are complete in checklist order. Optional generation
+runs only after a question is saved/starred, or through its saved-question controls
+at `/decks` and `/teacher-decks`. Gemini produces source-grounded giveaway,
+intermediate and early-buzzer fronts with exact excerpts and original official
+part answers. Students can preview, filter, reveal, edit and remove clues. Shared
+Firebase cache hits preserve personal edits; leases, fencing, transactional quotas,
+safe cooldowns, lifecycle status and confirmed revision-based regeneration prevent
+duplicate calls and stale overwrites. Ordinary fetching, answering, reveals and
+exports never generate clues. Validation passes: 114 unit tests, 25 Firestore
+rules/transaction tests, desktop/mobile clue and existing deck browser suites,
+lint, formatting, typecheck, secret scan and a webpack production build. Live
+provider use still requires private Gemini configuration; no live key was present
+during verification. See `docs/ai-generation.md` for setup and operational limits.
 
 ## 8. Anki Integration
 - [x] **[High]** Export custom decks to Anki APKG format
@@ -167,8 +181,8 @@ The export endpoint transactionally checks current ownership or sharing access.
 Anki 26.9.3 backend tests verify rendering, repeated and filtered imports,
 question/clue edits, cross-format updates, and preserved review scheduling.
 Anki uses whole-second APKG revision timestamps; re-download after a second
-if a rapid edit did not refresh a note. Task 7 generation is still pending:
-identifier export reads saved results only and makes no AI calls. Older saved
+if a rapid edit did not refresh a note. Task 7 generation is available on saved
+questions; identifier export reads saved results only and makes no AI calls. Older saved
 questions keep their stored plain text; new questions retain basic formatting.
 
 ## 9. Teacher/Admin Dashboard

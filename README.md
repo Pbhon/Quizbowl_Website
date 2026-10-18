@@ -670,3 +670,18 @@ denial coverage. With Auth and Firestore emulators running, set `E2E_FIREBASE=tr
 and run `pnpm test:e2e tests/e2e/calendar.spec.ts` for desktop/mobile authoring,
 editing, student visibility, RSVPs, announcements, deadlines, dashboards, export,
 revocation and responsive layout checks. The test suite uses only the demo project.
+
+## AI identifier flashcards (Task 7)
+
+Optional generation is available after starring or saving a question, and on owned
+saved questions at `/decks` and `/teacher-decks`. Preview clues by complexity,
+reveal original official answers, verify exact source excerpts, edit fronts and
+remove inaccurate clues. Cache reuse preserves personal edits; confirmed
+regeneration uses revision checks, leases and the same daily allowance. Practice
+fetching, answering, reveals and exports never generate clues.
+
+Private Gemini free-tier configuration, quota settings, retry behavior and tests
+are documented in [docs/ai-generation.md](docs/ai-generation.md). Add the private API
+key, choose an available model and enable generation to make live provider calls.
+No credentials are included in the repository. Run `pnpm test:ai` for the focused
+suite, plus the emulator and desktop/mobile browser checks documented there.

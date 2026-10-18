@@ -114,6 +114,25 @@ test("real Firestore concurrent students reserve one generation lease and reuse 
     quotas.reduce((sum, doc) => sum + (doc.data()?.count || 0), 0),
     1,
   );
+  const before = await server.generateSavedClues(db, uid, "deck", "card", true);
+  const replacements = await Promise.allSettled(
+    Array.from({ length: 6 }, (_, index) =>
+      server.generateSavedClues(
+        db,
+        index % 2 ? uid : other,
+        "deck",
+        "card",
+        true,
+        { regenerate: true, expectedRevision: before.generation.revision },
+      ),
+    ),
+  );
+  assert.ok(replacements.some((result) => result.status === "fulfilled"));
+  assert.equal(
+    calls,
+    2,
+    "concurrent regeneration must reserve only one new provider request",
+  );
 });
 test("account exports include nested owner records and own school progress but exclude other accounts", async () => {
   const { uid, other, teamId, server } = fixture();

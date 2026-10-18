@@ -1053,6 +1053,7 @@ function SavedCardPanel({
         <QuestionFace question={card.question} />
         <QuestionFace question={card.question} answer />
         <GeneratedClues
+          key={`${deckId}:${card.id}:${JSON.stringify(card.generation)}`}
           user={user}
           deckId={deckId}
           card={card}

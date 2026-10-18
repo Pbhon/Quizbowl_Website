@@ -45,6 +45,7 @@ const question = {
   answerLines: ["Answer"],
 };
 const decks = load("src/lib/server/decks.ts", {
+  "@/lib/clues": load("src/lib/clues.ts", {}),
   ...baseImports,
   "./deck-permissions": permissions,
   "node:crypto": { createHash },

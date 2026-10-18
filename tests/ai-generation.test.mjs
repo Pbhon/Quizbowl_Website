@@ -87,8 +87,13 @@ function fixture(fetcher, env = {}) {
   return {
     db,
     calls: () => calls,
-    generate: (uid = "one", verified = true, deck = "deck") =>
-      server.generateSavedClues(db, uid, deck, "card", verified),
+    generate: (uid = "one", verified = true, deck = "deck", options = {}) =>
+      server.generateSavedClues(db, uid, deck, "card", verified, options),
+    regenerate: (expectedRevision, uid = "one") =>
+      server.generateSavedClues(db, uid, "deck", "card", true, {
+        regenerate: true,
+        expectedRevision,
+      }),
     status: (uid = "one") =>
       server.savedClueStatus(db, uid, "deck", "card", true),
   };
@@ -362,4 +367,82 @@ test("configurable student quotas count failures, reset at UTC midnight and exem
     await assert.rejects(invalid.generate(), { status: 503 });
     assert.equal(invalid.calls(), 0);
   }
+});
+
+test("manual regeneration requires a saved revision, deduplicates races and reuses newer shared results", async () => {
+  const f = fixture();
+  await assert.rejects(f.generate("one", true, "deck", { regenerate: true }), {
+    status: 400,
+  });
+  const initial = await f.generate();
+  await f.generate("two");
+  const revision = initial.generation.revision;
+  const results = await Promise.allSettled([
+    f.regenerate(revision),
+    f.regenerate(revision),
+  ]);
+  assert.ok(results.some((result) => result.status === "fulfilled"));
+  assert.equal(f.calls(), 2);
+  await assert.rejects(f.regenerate(revision), { status: 409 });
+  const newer = await f.regenerate(revision, "two");
+  assert.equal(newer.cached, true);
+  assert.notEqual(newer.generation.revision, revision);
+  assert.equal(f.calls(), 2);
+});
+
+test("failed regeneration retains old cards and cache; later explicit retry respects cooldown", async () => {
+  let f;
+  f = fixture(() =>
+    f.calls() === 1
+      ? Response.json({
+          candidates: [
+            {
+              finishReason: "STOP",
+              content: { parts: [{ text: JSON.stringify([clue]) }] },
+            },
+          ],
+        })
+      : new Response("private", { status: 503 }),
+  );
+  const initial = await f.generate();
+  await assert.rejects(f.regenerate(initial.generation.revision), {
+    status: 502,
+  });
+  const saved = f.db.records.get("users/one/decks/deck/questions/card");
+  assert.equal(saved.identifiers.length, 1);
+  assert.equal(saved.generation.status, "failed");
+  await assert.rejects(f.regenerate(initial.generation.revision), {
+    status: 409,
+  });
+  assert.equal((await f.generate("two")).cached, true);
+  assert.equal(f.calls(), 2);
+});
+
+test("regeneration never overwrites personal edits made while the provider is running", async () => {
+  let f;
+  f = fixture(() => {
+    if (f.calls() === 2) {
+      const path = "users/one/decks/deck/questions/card";
+      const data = f.db.records.get(path);
+      data.identifiers[0].clue = "My newer edit must survive";
+      data.identifiersEdited = true;
+      f.db.records.set(path, data);
+    }
+    return Response.json({
+      candidates: [
+        {
+          finishReason: "STOP",
+          content: { parts: [{ text: JSON.stringify([clue]) }] },
+        },
+      ],
+    });
+  });
+  const initial = await f.generate();
+  await assert.rejects(f.regenerate(initial.generation.revision), {
+    status: 409,
+  });
+  assert.equal(
+    f.db.records.get("users/one/decks/deck/questions/card").identifiers[0].clue,
+    "My newer edit must survive",
+  );
 });

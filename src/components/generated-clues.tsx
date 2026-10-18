@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { User } from "firebase/auth";
 import type { SavedCard, IdentifierCard } from "@/lib/decks";
 import { identifierAnswer, complexityLabels } from "@/lib/decks";
@@ -27,12 +27,14 @@ export function GeneratedClues({
   canEdit: boolean;
   refresh: () => void;
 }) {
+  const filterId = useId();
   const lock = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [complexity, setComplexity] = useState("all");
   const [now, setNow] = useState(0);
   const [usage, setUsage] = useState<GenerationUsage | null>(null);
+  const [confirmRegeneration, setConfirmRegeneration] = useState(false);
   const [state, setState] = useState<GenerationState>(
     card.generation || {
       status: card.identifiers?.length ? "completed" : "pending",
@@ -58,15 +60,26 @@ export function GeneratedClues({
       setError(failure instanceof Error ? failure.message : "Please retry.");
     }
   }
-  async function generate() {
+  async function generate(regenerate = false) {
     if (lock.current) return;
     lock.current = true;
     setBusy(true);
     setState({ status: "generating" });
     setError("");
     try {
-      await requestClues(user, deckId, card.id);
-      setState({ status: "completed" });
+      const result = await requestClues(
+        user,
+        deckId,
+        card.id,
+        regenerate
+          ? {
+              regenerate: true,
+              expectedRevision: card.generation?.revision || state.revision,
+            }
+          : {},
+      );
+      setState(result.generation);
+      setConfirmRegeneration(false);
       refresh();
     } catch (failure) {
       setState(
@@ -99,21 +112,22 @@ export function GeneratedClues({
           Check generation status
         </Button>
       )}
-      <label className="block text-sm">
-        Clue complexity
-        <select
-          className="form-select mt-1"
-          value={complexity}
-          onChange={(event) => setComplexity(event.target.value)}
-        >
-          <option value="all">All complexities</option>
-          {Object.entries(complexityLabels).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
+      <label className="block text-sm" htmlFor={filterId}>
+        Filter identifier complexity
       </label>
+      <select
+        id={filterId}
+        className="form-select mt-1"
+        value={complexity}
+        onChange={(event) => setComplexity(event.target.value)}
+      >
+        <option value="all">All complexities</option>
+        {Object.entries(complexityLabels).map(([value, label]) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
+      </select>
       {card.identifiers
         ?.filter(
           (clue) => complexity === "all" || clue.complexity === complexity,
@@ -165,14 +179,52 @@ export function GeneratedClues({
       {canEdit && (
         <Button
           variant="outline"
-          disabled={busy}
+          disabled={busy || Boolean(state.retryAt && state.retryAt > now)}
           onClick={() => {
             if (!state.retryAt || state.retryAt <= Date.now()) void generate();
           }}
           aria-disabled={Boolean(state.retryAt && state.retryAt > now)}
         >
-          {busy ? "Generating clues…" : "Generate AI clues"}
+          {busy
+            ? "Generating clues…"
+            : state.status === "failed"
+              ? "Retry generation"
+              : card.identifiers?.length
+                ? "Use cached clues"
+                : "Generate AI clues"}
         </Button>
+      )}
+      {canEdit && (card.generation?.revision || state.revision) && (
+        <div className="space-y-2">
+          <Button
+            variant="outline"
+            disabled={busy || Boolean(state.retryAt && state.retryAt > now)}
+            onClick={() => setConfirmRegeneration(!confirmRegeneration)}
+          >
+            Regenerate AI clues
+          </Button>
+          {confirmRegeneration && (
+            <div className="space-y-2">
+              <p>
+                Generate replacement clues? On success this replaces edited and
+                removed clues in this deck. A new provider request uses your
+                daily allowance; a newer cached result is reused.
+              </p>
+              <Button
+                disabled={busy || Boolean(state.retryAt && state.retryAt > now)}
+                onClick={() => void generate(true)}
+              >
+                Confirm regenerate clues
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setConfirmRegeneration(false)}
+              >
+                Cancel regeneration
+              </Button>
+            </div>
+          )}
+        </div>
       )}
       {error && <Notice error>{error}</Notice>}
       {usage && (
@@ -204,6 +256,7 @@ function ClueEditor({
   clue: IdentifierCard;
   refresh: () => void;
 }) {
+  const formId = useId();
   const [open, setOpen] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [front, setFront] = useState(clue.clue);
@@ -280,34 +333,34 @@ function ClueEditor({
       )}
       {open && (
         <form className="space-y-2" onSubmit={(event) => void save(event)}>
-          <label className="block text-sm">
+          <label className="block text-sm" htmlFor={`${formId}-front`}>
             Flashcard front
-            <textarea
-              className="form-select mt-1"
-              value={front}
-              onChange={(event) => setFront(event.target.value)}
-              required
-              maxLength={1000}
-            />
           </label>
-          <label className="block text-sm">
+          <textarea
+            id={`${formId}-front`}
+            className="form-select mt-1"
+            value={front}
+            onChange={(event) => setFront(event.target.value)}
+            required
+            maxLength={1000}
+          />
+          <label className="block text-sm" htmlFor={`${formId}-complexity`}>
             Edited clue complexity
-            <select
-              className="form-select mt-1"
-              value={complexity}
-              onChange={(event) =>
-                setComplexity(
-                  event.target.value as IdentifierCard["complexity"],
-                )
-              }
-            >
-              {Object.entries(complexityLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
           </label>
+          <select
+            id={`${formId}-complexity`}
+            className="form-select mt-1"
+            value={complexity}
+            onChange={(event) =>
+              setComplexity(event.target.value as IdentifierCard["complexity"])
+            }
+          >
+            {Object.entries(complexityLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
           <p className="text-xs">
             Your edit applies to this deck. The official answer and source
             excerpt stay attached.

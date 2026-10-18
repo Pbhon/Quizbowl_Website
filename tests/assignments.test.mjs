@@ -381,6 +381,7 @@ test("student workspace excludes drafts and other students' work and progress", 
   );
 });
 const deckServer = load("src/lib/server/decks.ts", {
+  "@/lib/clues": load("src/lib/clues.ts", {}),
   "./deck-permissions": load("src/lib/server/deck-permissions.ts", {
     "server-only": {},
     "./practice-persistence": { PracticeError },

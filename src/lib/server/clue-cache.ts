@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import type { Question } from "@/lib/practice";
 import type { IdentifierCard } from "@/lib/decks";
 
-export const clueVersion = "clues-v5";
+export const clueVersion = "clues-v6";
 export function clueCacheKey(question: Question, model: string) {
   // Include content, not just upstream IDs: edited upstream questions must miss.
   return createHash("sha256")

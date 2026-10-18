@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { loadBackend } from "./helpers/backend.mjs";
 import { memoryFirestore } from "./helpers/memory-firestore.mjs";
 const decks = loadBackend("src/lib/server/decks.ts", {
+  "./site-team": { siteTeam: () => ({ id: "school" }) },
   "firebase-admin/firestore": {
     FieldValue: { serverTimestamp: () => "stamp" },
   },
@@ -87,4 +88,23 @@ test("removing inaccurate clues keeps source and shared cache and detects stale 
   assert.equal(saved.identifiers.length, 0);
   assert.deepEqual(saved.originalQuestion, question);
   assert.equal(db.records.get("aiClueCache/shared").identifiers.length, 1);
+});
+
+test("clue edits and removals enforce current teacher creator permissions", async () => {
+  for (const action of ["editIdentifier", "removeIdentifier"]) {
+    const db = fixture();
+    db.records.set("users/owner/decks/deck", {
+      name: "Teacher deck",
+      curatedBy: "owner",
+    });
+    await assert.rejects(
+      decks.mutateDeck(db, "owner", { ...edit, action }, true),
+      { status: 403 },
+    );
+    assert.equal(
+      db.records.get("users/owner/decks/deck/questions/card").identifiers
+        .length,
+      1,
+    );
+  }
 });

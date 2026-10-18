@@ -1,6 +1,7 @@
 export type GenerationState = {
   status: "pending" | "generating" | "completed" | "failed";
   retryAt?: number;
+  revision?: string;
 };
 export type GenerationUsage = {
   used: number;
@@ -28,5 +29,6 @@ export function generationState(value: unknown): GenerationState {
   return {
     status: data.status as GenerationState["status"],
     ...(typeof data.retryAt === "number" ? { retryAt: data.retryAt } : {}),
+    ...(typeof data.revision === "string" ? { revision: data.revision } : {}),
   };
 }

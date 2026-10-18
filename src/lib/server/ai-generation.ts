@@ -73,17 +73,13 @@ export async function generateSavedClues(
   deckId: unknown,
   cardId: unknown,
   verified: boolean,
+  options: { regenerate?: boolean; expectedRevision?: string } = {},
 ) {
   if (!verified)
     throw new PracticeError("Verify your email before generating clues.", 403);
   const model = process.env.GEMINI_MODEL;
   const key = process.env.GEMINI_API_KEY;
-  if (
-    process.env.GEMINI_GENERATION_ENABLED !== "true" ||
-    !key ||
-    !model ||
-    !/^[a-zA-Z0-9.-]{1,80}$/.test(model)
-  )
+  if (!model || !/^[a-zA-Z0-9.-]{1,80}$/.test(model))
     throw new PracticeError("Clue generation is not configured.", 503);
   const deck = db.doc(`users/${uid}/decks/${documentId(deckId)}`);
   const card = deck.collection("questions").doc(documentId(cardId));
@@ -107,20 +103,61 @@ export async function generateSavedClues(
       );
     return question;
   }
-  const question = await db.runTransaction(source);
+  if (
+    options.regenerate !== undefined &&
+    typeof options.regenerate !== "boolean"
+  )
+    throw new PracticeError("Invalid generation action.", 400);
+  if (
+    options.regenerate &&
+    (typeof options.expectedRevision !== "string" ||
+      !/^[a-zA-Z0-9-]{1,80}$/.test(options.expectedRevision))
+  )
+    throw new PracticeError("Reload the saved clues before regenerating.", 400);
+  const initial = await db.runTransaction(async (tx) => {
+    const question = await source(tx);
+    const data = (await tx.get(card)).data()!;
+    if (
+      options.regenerate &&
+      data.generation?.revision !== options.expectedRevision
+    )
+      throw new PracticeError(
+        "Clues changed. Reload your deck before regenerating.",
+        409,
+      );
+    return {
+      question,
+      identifiers: JSON.stringify(data.identifiers || []),
+      revision: data.generation?.revision as string | undefined,
+    };
+  });
+  const question = initial.question;
   const cacheKey = clueCacheKey(question, model);
   const cache = db.doc(`aiClueCache/${cacheKey}`);
-  const now = Date.now(),
-    token = randomUUID();
-  const day = new Date(now).toISOString().slice(0, 10);
-  const quota = db.doc(`users/${uid}/aiUsage/${day}`);
-  const global = db.doc(`aiGenerationUsage/${day}`);
-  const minute = db.doc(`aiGenerationUsage/minute-${Math.floor(now / 60000)}`);
+  const token = randomUUID();
   const limits = generationLimits();
   const ready = await db.runTransaction(async (tx) => {
+    // Firestore can rerun this callback after contention; use the reservation's
+    // actual window and lease time rather than the original request's clock.
+    const now = Date.now();
+    const day = new Date(now).toISOString().slice(0, 10);
+    const quota = db.doc(`users/${uid}/aiUsage/${day}`);
+    const global = db.doc(`aiGenerationUsage/${day}`);
+    const minute = db.doc(
+      `aiGenerationUsage/minute-${Math.floor(now / 60000)}`,
+    );
     const live = await source(tx);
     if (clueCacheKey(live, model) !== cacheKey)
       throw new PracticeError("Saved question changed. Retry.", 409);
+    const currentCard = (await tx.get(card)).data()!;
+    if (
+      options.regenerate &&
+      currentCard.generation?.revision !== options.expectedRevision
+    )
+      throw new PracticeError(
+        "Clues changed. Reload your deck before regenerating.",
+        409,
+      );
     const [cached, used, all, burst] = await tx.getAll(
       cache,
       quota,
@@ -128,9 +165,21 @@ export async function generateSavedClues(
       minute,
     );
     const data = cached.data();
-    if (data?.status === "completed") {
+    let previous: {
+      identifiers: ReturnType<typeof validateClues>;
+      revision: string;
+    } | null = null;
+    if (data?.identifiers) {
       try {
-        return validateClues(data.identifiers, question);
+        previous = {
+          identifiers: validateClues(data.identifiers, question),
+          revision: data.revision || "legacy",
+        };
+        if (
+          !options.regenerate ||
+          previous.revision !== options.expectedRevision
+        )
+          return previous;
       } catch {
         // An obsolete or corrupt entry is a miss, never delivered to a student.
       }
@@ -145,6 +194,8 @@ export async function generateSavedClues(
         Math.max(data?.leaseUntil || 0, data?.retryAt || 0),
         generationState(data),
       );
+    if (process.env.GEMINI_GENERATION_ENABLED !== "true" || !key)
+      throw new PracticeError("Clue generation is not configured.", 503);
     if (
       (used.data()?.count || 0) >= limits.student ||
       (all.data()?.count || 0) >= limits.daily ||
@@ -169,6 +220,7 @@ export async function generateSavedClues(
         { merge: true },
       );
     tx.set(cache, {
+      ...(previous || {}),
       status: "generating",
       token,
       leaseUntil: now + 90000,
@@ -177,14 +229,19 @@ export async function generateSavedClues(
       updatedAt: FieldValue.serverTimestamp(),
     });
     tx.update(card, {
-      generation: { status: "generating", token, leaseUntil: now + 90000 },
+      generation: {
+        status: "generating",
+        token,
+        leaseUntil: now + 90000,
+        ...(initial.revision ? { revision: initial.revision } : {}),
+      },
     });
     return null;
   });
-  let identifiers = ready;
+  let identifiers = ready?.identifiers || null;
   if (!identifiers) {
     try {
-      identifiers = await gemini(question, model, key);
+      identifiers = await gemini(question, model, key!);
       const generated = identifiers;
       await db.runTransaction(async (tx) => {
         const current = await tx.get(cache);
@@ -198,6 +255,7 @@ export async function generateSavedClues(
           model,
           version: clueVersion,
           identifiers: generated,
+          revision: token,
           updatedAt: FieldValue.serverTimestamp(),
         });
       });
@@ -208,6 +266,12 @@ export async function generateSavedClues(
         const [cached, currentCard] = await tx.getAll(cache, card);
         if (cached.data()?.token === token) {
           tx.set(cache, {
+            ...(cached.data()?.identifiers
+              ? {
+                  identifiers: cached.data()!.identifiers,
+                  revision: cached.data()!.revision,
+                }
+              : {}),
             status: "failed",
             model,
             version: clueVersion,
@@ -219,7 +283,11 @@ export async function generateSavedClues(
             currentCard.data()?.generation?.token === token
           )
             tx.update(card, {
-              generation: { status: "failed", retryAt },
+              generation: {
+                status: "failed",
+                retryAt,
+                ...(initial.revision ? { revision: initial.revision } : {}),
+              },
             });
         }
       });
@@ -232,23 +300,53 @@ export async function generateSavedClues(
     }
   }
   const saved = identifiers;
+  const revision = ready?.revision || token;
   const delivered = await db.runTransaction(async (tx) => {
     const live = await source(tx);
     if (clueCacheKey(live, model) !== cacheKey)
       throw new PracticeError("Saved question changed. Retry.", 409);
     const current = (await tx.get(card)).data()!;
-    if (current.identifiersEdited === true) {
-      tx.update(card, { generation: { status: "completed" } });
+    const latestCache = (await tx.get(cache)).data();
+    if (
+      latestCache?.status === "completed" &&
+      latestCache.revision &&
+      latestCache.revision !== revision
+    )
+      throw new PracticeError(
+        "Newer clues are available. Reload your deck and retry.",
+        409,
+      );
+    if (
+      options.regenerate &&
+      (JSON.stringify(current.identifiers || []) !== initial.identifiers ||
+        current.generation?.revision !== initial.revision)
+    )
+      throw new PracticeError(
+        "Your clues were edited during generation. Reload before replacing them.",
+        409,
+      );
+    if (current.identifiersEdited === true && !options.regenerate) {
+      tx.update(card, {
+        generation: {
+          status: "completed",
+          revision: current.generation?.revision || revision,
+        },
+      });
       return savedIdentifiers(current.identifiers, live);
     }
     tx.update(card, {
       identifiers: saved,
       clueCacheKey: cacheKey,
       generatedAt: FieldValue.serverTimestamp(),
-      generation: { status: "completed" },
+      generation: { status: "completed", revision },
+      identifiersEdited: false,
     });
     tx.update(deck, { updatedAt: FieldValue.serverTimestamp() });
     return saved;
   });
-  return { identifiers: delivered, cached: Boolean(ready) };
+  return {
+    identifiers: delivered,
+    cached: Boolean(ready),
+    generation: { status: "completed" as const, revision },
+  };
 }

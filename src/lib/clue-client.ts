@@ -31,7 +31,12 @@ export async function checkClueStatus(
 }
 
 /** Generation is an explicit saved-question action, never a reader side effect. */
-export async function requestClues(user: User, deckId: string, cardId: string) {
+export async function requestClues(
+  user: User,
+  deckId: string,
+  cardId: string,
+  options: { regenerate?: boolean; expectedRevision?: string } = {},
+) {
   const response = await fetch("/api/ai/clues", {
     method: "POST",
     cache: "no-store",
@@ -39,7 +44,7 @@ export async function requestClues(user: User, deckId: string, cardId: string) {
       Authorization: `Bearer ${await user.getIdToken()}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ deckId, cardId }),
+    body: JSON.stringify({ deckId, cardId, ...options }),
   });
   const data = await response.json();
   if (!response.ok)

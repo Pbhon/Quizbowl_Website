@@ -52,7 +52,8 @@ failures write nothing. Guest `/api/practice/check-answer` never awards saved cr
 
 ## Secure generation endpoint
 
-`POST /api/ai/clues` accepts only `{ "deckId": "...", "cardId": "..." }`.
+`POST /api/ai/clues` accepts `{ "deckId": "...", "cardId": "..." }`;
+confirmed regeneration also includes `regenerate: true` and `expectedRevision`.
 It requires a non-revoked token, current verified email, an owned saved card and
 current teacher permissions for curated decks. It loads the original saved source,
 checks permissions again before reservation and delivery, and never takes arbitrary
@@ -75,9 +76,12 @@ do not. Usage records contain only counts and timestamps and expire after 32 day
 through the retention maintenance command. A lost worker may require a later retry;
 an upstream service cannot guarantee exactly-once billing after network failure.
 
-This backend endpoint does not complete Task 7's generation UI or the skipped
-Medium free-tier integration/configuration item. No ordinary fetch, answer, export
-or answer-reveal path invokes generation.
+Task 7 adds the saved-question controls, editable previews, exact evidence,
+read-only status/allowance checks and confirmed revision-based regeneration.
+Application quota defaults above can be lowered or raised within bounded private
+configuration; cached delivery remains available when provider calls are disabled.
+See [ai-generation.md](ai-generation.md) for free-tier setup, contracts and limits.
+No ordinary fetch, answer, export or answer-reveal path invokes generation.
 
 ## Anki endpoint
 

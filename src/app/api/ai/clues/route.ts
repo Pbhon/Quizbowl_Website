@@ -57,7 +57,13 @@ export async function POST(request: Request) {
       !body ||
       typeof body !== "object" ||
       Array.isArray(body) ||
-      Object.keys(body).some((key) => !["deckId", "cardId"].includes(key))
+      Object.keys(body).some(
+        (key) =>
+          !["deckId", "cardId", "regenerate", "expectedRevision"].includes(key),
+      ) ||
+      (body.regenerate !== undefined && typeof body.regenerate !== "boolean") ||
+      (body.expectedRevision !== undefined &&
+        (body.regenerate !== true || typeof body.expectedRevision !== "string"))
     )
       throw new PracticeError("Choose a saved deck and card.", 400);
     const user = await getFirebaseAdmin().auth.getUser(account.uid);
@@ -68,6 +74,10 @@ export async function POST(request: Request) {
         body.deckId,
         body.cardId,
         user.emailVerified,
+        {
+          regenerate: body.regenerate,
+          expectedRevision: body.expectedRevision,
+        },
       ),
       { headers },
     );
