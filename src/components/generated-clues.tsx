@@ -10,7 +10,7 @@ import {
   checkClueStatus,
   ClueRequestError,
 } from "@/lib/clue-client";
-import type { GenerationState } from "@/lib/clues";
+import type { GenerationState, GenerationUsage } from "@/lib/clues";
 import { Button } from "./ui/button";
 import { Notice } from "./form-field";
 
@@ -32,6 +32,7 @@ export function GeneratedClues({
   const [error, setError] = useState("");
   const [complexity, setComplexity] = useState("all");
   const [now, setNow] = useState(0);
+  const [usage, setUsage] = useState<GenerationUsage | null>(null);
   const [state, setState] = useState<GenerationState>(
     card.generation || {
       status: card.identifiers?.length ? "completed" : "pending",
@@ -50,7 +51,9 @@ export function GeneratedClues({
   async function checkStatus() {
     setError("");
     try {
-      setState((await checkClueStatus(user, deckId, card.id)).generation);
+      const result = await checkClueStatus(user, deckId, card.id);
+      setState(result.generation);
+      setUsage(result.usage);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Please retry.");
     }
@@ -172,6 +175,13 @@ export function GeneratedClues({
         </Button>
       )}
       {error && <Notice error>{error}</Notice>}
+      {usage && (
+        <p className="text-sm">
+          Daily AI allowance: {usage.remaining} of {usage.limit} requests
+          remaining. Resets {new Date(usage.resetsAt).toLocaleString()}. Cached
+          clues use no allowance; failed requests count.
+        </p>
+      )}
       {state.retryAt && state.retryAt > now && (
         <p className="text-sm">
           Retry available after {new Date(state.retryAt).toLocaleTimeString()}.

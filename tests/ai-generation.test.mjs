@@ -332,3 +332,34 @@ test("provider Retry-After and bounded failures persist safe cooldowns without a
     assert.equal(failure.calls(), 1);
   }
 });
+
+test("configurable student quotas count failures, reset at UTC midnight and exempt shared hits", async () => {
+  const f = fixture(undefined, { GEMINI_STUDENT_DAILY_LIMIT: "1" });
+  assert.equal((await f.status()).usage.remaining, 1);
+  await f.generate();
+  assert.equal((await f.status()).usage.remaining, 0);
+  assert.equal((await f.generate()).cached, true);
+  assert.equal((await f.status("two")).usage.remaining, 1);
+  const key = [...f.db.records.keys()].find((key) =>
+    key.startsWith("aiClueCache/"),
+  );
+  f.db.records.delete(key);
+  await assert.rejects(
+    f.generate(),
+    (error) =>
+      error.status === 429 &&
+      error.retryAt ===
+        Date.parse(new Date().toISOString().slice(0, 10)) + 86400000,
+  );
+  assert.equal(f.calls(), 1);
+  const failure = fixture(() => new Response("error", { status: 503 }), {
+    GEMINI_STUDENT_DAILY_LIMIT: "1",
+  });
+  await assert.rejects(failure.generate(), { status: 502 });
+  assert.equal((await failure.status()).usage.remaining, 0);
+  for (const limit of ["0", "-1", "10000", "abc"]) {
+    const invalid = fixture(undefined, { GEMINI_STUDENT_DAILY_LIMIT: limit });
+    await assert.rejects(invalid.generate(), { status: 503 });
+    assert.equal(invalid.calls(), 0);
+  }
+});

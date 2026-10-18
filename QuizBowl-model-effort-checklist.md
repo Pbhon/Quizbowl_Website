@@ -141,7 +141,7 @@ Questions stays private. No AI generation is added.
 - [x] **[High]** Prevent simultaneous duplicate AI generation requests
 - [x] **[Medium]** Track generation status: pending, generating, completed, failed
 - [x] **[High]** Handle API rate limits and generation failures
-- [ ] **[High]** Set per-student AI generation quotas
+- [x] **[High]** Set per-student AI generation quotas
 - [ ] **[High]** Support manual retry or regeneration when needed
 
 ## 8. Anki Integration

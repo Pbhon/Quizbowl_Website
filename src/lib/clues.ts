@@ -2,6 +2,12 @@ export type GenerationState = {
   status: "pending" | "generating" | "completed" | "failed";
   retryAt?: number;
 };
+export type GenerationUsage = {
+  used: number;
+  limit: number;
+  remaining: number;
+  resetsAt: number;
+};
 
 /** Whitelist public status fields; fencing tokens and provider details stay private. */
 export function generationState(value: unknown): GenerationState {

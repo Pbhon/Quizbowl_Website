@@ -14,6 +14,7 @@ import { documentId } from "./history";
 import { requireDeckEditor } from "./deck-permissions";
 import { generationState } from "@/lib/clues";
 import { GenerationError } from "./generation-error";
+import { generationLimits } from "./generation-limits";
 
 export async function savedClueStatus(
   db: Firestore,
@@ -34,6 +35,10 @@ export async function savedClueStatus(
     const data = saved.data()!;
     const question = (data.originalQuestion || data.question) as Question;
     const model = process.env.GEMINI_MODEL;
+    const day = new Date().toISOString().slice(0, 10);
+    const used =
+      (await tx.get(db.doc(`users/${uid}/aiUsage/${day}`))).data()?.count || 0;
+    const limit = generationLimits().student;
     const configured = Boolean(
       process.env.GEMINI_GENERATION_ENABLED === "true" &&
       process.env.GEMINI_API_KEY &&
@@ -46,6 +51,12 @@ export async function savedClueStatus(
         ).data()
       : undefined;
     return {
+      usage: {
+        used,
+        limit,
+        remaining: Math.max(0, limit - used),
+        resetsAt: Date.parse(`${day}T00:00:00Z`) + 86400000,
+      },
       generation: generationState(
         cached ||
           data.generation ||
@@ -105,6 +116,7 @@ export async function generateSavedClues(
   const quota = db.doc(`users/${uid}/aiUsage/${day}`);
   const global = db.doc(`aiGenerationUsage/${day}`);
   const minute = db.doc(`aiGenerationUsage/minute-${Math.floor(now / 60000)}`);
+  const limits = generationLimits();
   const ready = await db.runTransaction(async (tx) => {
     const live = await source(tx);
     if (clueCacheKey(live, model) !== cacheKey)
@@ -134,13 +146,17 @@ export async function generateSavedClues(
         generationState(data),
       );
     if (
-      (used.data()?.count || 0) >= 20 ||
-      (all.data()?.count || 0) >= 200 ||
-      (burst.data()?.count || 0) >= 10
+      (used.data()?.count || 0) >= limits.student ||
+      (all.data()?.count || 0) >= limits.daily ||
+      (burst.data()?.count || 0) >= limits.minute
     )
-      throw new PracticeError(
+      throw new GenerationError(
         "The generation limit has been reached. Try later.",
         429,
+        (used.data()?.count || 0) >= limits.student ||
+          (all.data()?.count || 0) >= limits.daily
+          ? Date.parse(`${day}T00:00:00Z`) + 86400000
+          : (Math.floor(now / 60000) + 1) * 60000,
       );
     for (const ref of [quota, global, minute])
       tx.set(
