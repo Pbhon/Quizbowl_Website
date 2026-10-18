@@ -1,5 +1,8 @@
 # QuizBowl team workspace
 
+See [team deployment readiness](docs/deployment.md) for the latest audit, hosting
+configuration, remaining launch steps and production/test account separation.
+
 All Task 12 backend items are complete, including the seven Medium items verified
 in the follow-up. See [backend contracts and operations](docs/backend.md) for the
 clue-generation configuration, API quotas, collections, privacy export, deletion
@@ -12,11 +15,11 @@ password recovery and changes, email verification, and account preferences.
 Practice, student statistics, and question history are implemented as described
 below. All of Task 6 deck management, including private and team-shared decks,
 is implemented. Task 10 assignment authoring, automatic progress, and teacher deck
-sharing/edit protections are complete. Calendar authoring remains task 11.
+sharing/edit protections and Task 11 calendar authoring are complete.
 
 ## Run locally
 
-Use Node.js 22+ and pnpm 11.25.0:
+Use Node.js 24.x and pnpm 11.25.0:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -222,7 +225,8 @@ Configure the public Firebase web variables and private admin server variables
 in the appropriate Vercel environments, with emulator mode false. Add the final
 website domain to Firebase Authentication.
 
-Gemini remains reserved for later features; no AI generation occurs here.
+Optional saved-question Gemini generation is implemented; see
+[AI generation](docs/ai-generation.md) for current model and configuration.
 
 References: [Firebase user management](https://firebase.google.com/docs/auth/web/manage-users),
 [atomic Firestore transactions and rules](https://firebase.google.com/docs/firestore/manage-data/transactions),
