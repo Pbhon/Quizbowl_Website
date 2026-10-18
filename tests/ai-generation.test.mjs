@@ -287,3 +287,48 @@ test("saved status is read-only, owner-scoped and exposes all lifecycle states w
   assert.equal((await failure.status()).generation.status, "failed");
   assert.ok((await failure.status()).generation.retryAt > Date.now());
 });
+
+test("provider Retry-After and bounded failures persist safe cooldowns without automatic retries", async () => {
+  const f = fixture(
+    () =>
+      new Response("private provider message", {
+        status: 429,
+        headers: { "Retry-After": "180" },
+      }),
+  );
+  const before = Date.now();
+  await assert.rejects(
+    f.generate(),
+    (error) =>
+      error.status === 429 &&
+      error.retryAt >= before + 180000 &&
+      !error.message.includes("private provider"),
+  );
+  assert.ok((await f.status()).generation.retryAt >= before + 180000);
+  await assert.rejects(f.generate(), { status: 409 });
+  assert.equal(f.calls(), 1);
+  for (const response of [
+    () => new Response("x".repeat(128001)),
+    () => {
+      throw new DOMException("private timeout detail", "TimeoutError");
+    },
+    () => Response.json({ candidates: [{ finishReason: "MAX_TOKENS" }] }),
+    () =>
+      Response.json({
+        candidates: [
+          { finishReason: "STOP", content: { parts: [{ text: "not json" }] } },
+        ],
+      }),
+  ]) {
+    const failure = fixture(response);
+    await assert.rejects(
+      failure.generate(),
+      (error) =>
+        error.status === 502 &&
+        error.retryAt > Date.now() &&
+        !error.message.includes("private"),
+    );
+    assert.equal((await failure.status()).generation.status, "failed");
+    assert.equal(failure.calls(), 1);
+  }
+});

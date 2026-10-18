@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { User } from "firebase/auth";
 import type { SavedCard, IdentifierCard } from "@/lib/decks";
 import { identifierAnswer, complexityLabels } from "@/lib/decks";
@@ -8,6 +8,7 @@ import {
   requestClues,
   editSavedClue,
   checkClueStatus,
+  ClueRequestError,
 } from "@/lib/clue-client";
 import type { GenerationState } from "@/lib/clues";
 import { Button } from "./ui/button";
@@ -30,11 +31,22 @@ export function GeneratedClues({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [complexity, setComplexity] = useState("all");
+  const [now, setNow] = useState(0);
   const [state, setState] = useState<GenerationState>(
     card.generation || {
       status: card.identifiers?.length ? "completed" : "pending",
     },
   );
+  useEffect(() => {
+    if (!state.retryAt) return;
+    const retryAt = state.retryAt;
+    const timer = setInterval(() => {
+      const current = Date.now();
+      setNow(current);
+      if (current >= retryAt) clearInterval(timer);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [state.retryAt]);
   async function checkStatus() {
     setError("");
     try {
@@ -54,7 +66,15 @@ export function GeneratedClues({
       setState({ status: "completed" });
       refresh();
     } catch (failure) {
-      setState({ status: "failed" });
+      setState(
+        failure instanceof ClueRequestError
+          ? {
+              status: "failed",
+              ...failure.generation,
+              retryAt: failure.retryAt,
+            }
+          : { status: "failed" },
+      );
       setError(failure instanceof Error ? failure.message : "Please retry.");
     } finally {
       lock.current = false;
@@ -143,12 +163,20 @@ export function GeneratedClues({
         <Button
           variant="outline"
           disabled={busy}
-          onClick={() => void generate()}
+          onClick={() => {
+            if (!state.retryAt || state.retryAt <= Date.now()) void generate();
+          }}
+          aria-disabled={Boolean(state.retryAt && state.retryAt > now)}
         >
           {busy ? "Generating clues…" : "Generate AI clues"}
         </Button>
       )}
       {error && <Notice error>{error}</Notice>}
+      {state.retryAt && state.retryAt > now && (
+        <p className="text-sm">
+          Retry available after {new Date(state.retryAt).toLocaleTimeString()}.
+        </p>
+      )}
     </section>
   );
 }

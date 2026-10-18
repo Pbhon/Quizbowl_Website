@@ -1,4 +1,16 @@
 import type { User } from "firebase/auth";
+import type { GenerationState } from "./clues";
+
+export class ClueRequestError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public retryAt?: number,
+    public generation?: GenerationState,
+  ) {
+    super(message);
+  }
+}
 
 export async function checkClueStatus(
   user: User,
@@ -30,7 +42,13 @@ export async function requestClues(user: User, deckId: string, cardId: string) {
     body: JSON.stringify({ deckId, cardId }),
   });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || "Clue generation failed.");
+  if (!response.ok)
+    throw new ClueRequestError(
+      data.error || "Clue generation failed.",
+      response.status,
+      data.retryAt,
+      data.generation,
+    );
   return data;
 }
 

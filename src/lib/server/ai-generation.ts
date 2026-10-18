@@ -13,6 +13,7 @@ import { gemini } from "./gemini";
 import { documentId } from "./history";
 import { requireDeckEditor } from "./deck-permissions";
 import { generationState } from "@/lib/clues";
+import { GenerationError } from "./generation-error";
 
 export async function savedClueStatus(
   db: Firestore,
@@ -126,9 +127,11 @@ export async function generateSavedClues(
       (data?.status === "generating" && data.leaseUntil > now) ||
       data?.retryAt > now
     )
-      throw new PracticeError(
+      throw new GenerationError(
         "Clues are being generated or cooling down. Retry in a minute.",
         409,
+        Math.max(data?.leaseUntil || 0, data?.retryAt || 0),
+        generationState(data),
       );
     if (
       (used.data()?.count || 0) >= 20 ||
@@ -183,6 +186,8 @@ export async function generateSavedClues(
         });
       });
     } catch (error) {
+      const retryAt =
+        error instanceof GenerationError ? error.retryAt : Date.now() + 60000;
       await db.runTransaction(async (tx) => {
         const [cached, currentCard] = await tx.getAll(cache, card);
         if (cached.data()?.token === token) {
@@ -190,7 +195,7 @@ export async function generateSavedClues(
             status: "failed",
             model,
             version: clueVersion,
-            retryAt: Date.now() + 60000,
+            retryAt,
             updatedAt: FieldValue.serverTimestamp(),
           });
           if (
@@ -198,14 +203,15 @@ export async function generateSavedClues(
             currentCard.data()?.generation?.token === token
           )
             tx.update(card, {
-              generation: { status: "failed", retryAt: Date.now() + 60000 },
+              generation: { status: "failed", retryAt },
             });
         }
       });
       if (error instanceof PracticeError) throw error;
-      throw new PracticeError(
+      throw new GenerationError(
         "Generation failed validation or timed out. Retry in a minute.",
         502,
+        retryAt,
       );
     }
   }

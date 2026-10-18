@@ -7,6 +7,7 @@ import {
   generateSavedClues,
   savedClueStatus,
 } from "@/lib/server/ai-generation";
+import { GenerationError } from "@/lib/server/generation-error";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 const headers = { "Cache-Control": "private, no-store", Vary: "Authorization" };
@@ -34,6 +35,9 @@ export async function GET(request: Request) {
   } catch (error) {
     return Response.json(
       {
+        ...(error instanceof GenerationError
+          ? { retryAt: error.retryAt, generation: error.generation }
+          : {}),
         error:
           error instanceof PracticeError
             ? error.message
@@ -76,6 +80,9 @@ export async function POST(request: Request) {
           : 503;
     return Response.json(
       {
+        ...(error instanceof GenerationError
+          ? { retryAt: error.retryAt, generation: error.generation }
+          : {}),
         error:
           error instanceof PracticeError
             ? error.message
@@ -85,7 +92,15 @@ export async function POST(request: Request) {
         status,
         headers: {
           ...headers,
-          ...([429, 409].includes(status) ? { "Retry-After": "60" } : {}),
+          ...(error instanceof GenerationError
+            ? {
+                "Retry-After": String(
+                  Math.max(1, Math.ceil((error.retryAt - Date.now()) / 1000)),
+                ),
+              }
+            : [429, 409].includes(status)
+              ? { "Retry-After": "60" }
+              : {}),
         },
       },
     );

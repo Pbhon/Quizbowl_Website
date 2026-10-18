@@ -140,7 +140,7 @@ Questions stays private. No AI generation is added.
 - [x] **[High]** Cache generated clues for reuse across students
 - [x] **[High]** Prevent simultaneous duplicate AI generation requests
 - [x] **[Medium]** Track generation status: pending, generating, completed, failed
-- [ ] **[High]** Handle API rate limits and generation failures
+- [x] **[High]** Handle API rate limits and generation failures
 - [ ] **[High]** Set per-student AI generation quotas
 - [ ] **[High]** Support manual retry or regeneration when needed
 
