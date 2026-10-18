@@ -199,3 +199,31 @@ test("every request validates Firebase cache before quota; corrupt cache is repa
   assert.equal((await f.generate()).cached, false);
   assert.equal(f.calls(), 2);
 });
+
+test("cross-student cache reuse never copies personal edits or restores removed clues", async () => {
+  const f = fixture();
+  await f.generate();
+  const path = "users/one/decks/deck/questions/card";
+  const personal = f.db.records.get(path);
+  personal.identifiers[0].clue = "My personal study wording";
+  personal.identifiersEdited = true;
+  f.db.records.set(path, personal);
+  assert.equal(
+    (await f.generate()).identifiers[0].clue,
+    "My personal study wording",
+  );
+  assert.notEqual(
+    (await f.generate("two")).identifiers[0].clue,
+    "My personal study wording",
+  );
+  personal.identifiers = [];
+  f.db.records.set(path, personal);
+  assert.equal((await f.generate()).identifiers.length, 0);
+  assert.equal(f.calls(), 1);
+  const shared = [...f.db.records].filter(([path]) =>
+    path.startsWith("aiClueCache/"),
+  );
+  assert.equal(shared.length, 1);
+  assert.ok(!JSON.stringify(shared).includes("personal"));
+  assert.ok(!JSON.stringify(shared).includes("private note"));
+});

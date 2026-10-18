@@ -6,6 +6,7 @@ import {
   type Transaction,
 } from "firebase-admin/firestore";
 import type { Question } from "@/lib/practice";
+import { savedIdentifiers } from "@/lib/decks";
 import { clueCacheKey, clueVersion, validateClues } from "./clue-cache";
 import { PracticeError } from "./practice-persistence";
 import { gemini } from "./gemini";
@@ -152,16 +153,20 @@ export async function generateSavedClues(
     }
   }
   const saved = identifiers;
-  await db.runTransaction(async (tx) => {
+  const delivered = await db.runTransaction(async (tx) => {
     const live = await source(tx);
     if (clueCacheKey(live, model) !== cacheKey)
       throw new PracticeError("Saved question changed. Retry.", 409);
+    const current = (await tx.get(card)).data()!;
+    if (current.identifiersEdited === true)
+      return savedIdentifiers(current.identifiers, live);
     tx.update(card, {
       identifiers: saved,
       clueCacheKey: cacheKey,
       generatedAt: FieldValue.serverTimestamp(),
     });
     tx.update(deck, { updatedAt: FieldValue.serverTimestamp() });
+    return saved;
   });
-  return { identifiers, cached: Boolean(ready) };
+  return { identifiers: delivered, cached: Boolean(ready) };
 }
