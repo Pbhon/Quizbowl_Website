@@ -14,6 +14,9 @@ hosting setup and the owner's email verification still need completion.
    hosting variables. The local `GOOGLE_APPLICATION_CREDENTIALS` path is only for
    this computer and must not be copied to Vercel. Set the team ID/name and private
    administrator registration code; keep emulator mode off.
+   Set `GEMINI_STUDENT_DAILY_LIMIT=20` and
+   `GEMINI_DEPLOYMENT_DAILY_LIMIT=400` (team-wide). Redeploy after changing Vercel
+   variables; an older explicit value of 200 overrides the new default.
 3. Add the final hostname to Firebase Authentication's authorized domains.
    The live project currently authorizes Firebase's default hosts, localhost and
    127.0.0.1. No Vercel/custom production hostname was present during the audit.

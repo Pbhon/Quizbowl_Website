@@ -98,6 +98,9 @@ test("saved clue lifecycle: cached generation, source reveal, editing, removal a
       name: "AI identifier flashcards",
     });
     await expect(panel.getByText(/Generation status: pending/)).toBeVisible();
+    await expect(
+      panel.getByText(/AI generations today: 0 \/ 20 used · 20 remaining/),
+    ).toBeVisible();
     expect(generationPosts).toBe(0);
     await panel
       .getByRole("button", { name: "Generate AI clues", exact: true })
@@ -112,7 +115,9 @@ test("saved clue lifecycle: cached generation, source reveal, editing, removal a
     await panel
       .getByRole("button", { name: "Check generation status", exact: true })
       .click();
-    await expect(panel.getByText(/20 of 20 requests remaining/)).toBeVisible();
+    await expect(
+      panel.getByText(/AI generations today: 0 \/ 20 used · 20 remaining/),
+    ).toBeVisible();
     expect(generationPosts).toBe(1);
     await panel.getByRole("button", { name: "Edit clue", exact: true }).click();
     await panel
@@ -171,6 +176,10 @@ test("saved clue lifecycle: cached generation, source reveal, editing, removal a
       question.answerLines,
     );
     // Fresh generation is disabled in this test server; failure preserves existing cards.
+    const quota = db.doc(
+      `users/${user.uid}/aiUsage/${new Date().toISOString().slice(0, 10)}`,
+    );
+    await quota.set({ count: 20 });
     await panel
       .getByRole("button", { name: "Regenerate AI clues", exact: true })
       .click();
@@ -179,6 +188,35 @@ test("saved clue lifecycle: cached generation, source reveal, editing, removal a
       .click();
     await expect(
       panel.getByText("Clue generation is not configured.", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      panel.getByText(/AI generations today: 20 \/ 20 used · 0 remaining/),
+    ).toBeVisible();
+    await expect(panel.getByText(/Your daily limit is reached/)).toBeVisible();
+    // Reload reads durable usage; it does not reset the allowance.
+    await page.reload();
+    await deck.locator("summary").filter({ hasText: "AI biology" }).click();
+    await deck.locator("summary").filter({ hasText: "Difficulty 4" }).click();
+    await expect(
+      panel.getByText(/AI generations today: 20 \/ 20 used · 0 remaining/),
+    ).toBeVisible();
+    // Free cache delivery remains usable at the limit and refreshes the counter.
+    await panel
+      .getByRole("button", { name: "Use cached clues", exact: true })
+      .click();
+    await expect(
+      panel.getByText("Generation status: completed", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      panel.getByText(/AI generations today: 20 \/ 20 used · 0 remaining/),
+    ).toBeVisible();
+    expect((await quota.get()).data()?.count).toBe(20);
+    await quota.set({ count: 0 });
+    await panel
+      .getByRole("button", { name: "Refresh AI allowance", exact: true })
+      .click();
+    await expect(
+      panel.getByText(/AI generations today: 0 \/ 20 used · 20 remaining/),
     ).toBeVisible();
     await expect(
       panel.getByText("What molecule has a double helix?", { exact: true }),

@@ -1,5 +1,6 @@
 import type { User } from "firebase/auth";
 import type { GenerationState } from "./clues";
+import { refreshGenerationUsage } from "./generation-usage-client";
 
 export class ClueRequestError extends Error {
   constructor(
@@ -37,24 +38,28 @@ export async function requestClues(
   cardId: string,
   options: { regenerate?: boolean; expectedRevision?: string } = {},
 ) {
-  const response = await fetch("/api/ai/clues", {
-    method: "POST",
-    cache: "no-store",
-    headers: {
-      Authorization: `Bearer ${await user.getIdToken()}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ deckId, cardId, ...options }),
-  });
-  const data = await response.json();
-  if (!response.ok)
-    throw new ClueRequestError(
-      data.error || "Clue generation failed.",
-      response.status,
-      data.retryAt,
-      data.generation,
-    );
-  return data;
+  try {
+    const response = await fetch("/api/ai/clues", {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${await user.getIdToken()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ deckId, cardId, ...options }),
+    });
+    const data = await response.json();
+    if (!response.ok)
+      throw new ClueRequestError(
+        data.error || "Clue generation failed.",
+        response.status,
+        data.retryAt,
+        data.generation,
+      );
+    return data;
+  } finally {
+    await refreshGenerationUsage(user);
+  }
 }
 
 export async function editSavedClue(user: User, body: Record<string, unknown>) {

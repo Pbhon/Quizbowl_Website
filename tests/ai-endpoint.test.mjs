@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { loadBackend } from "./helpers/backend.mjs";
+import { memoryFirestore } from "./helpers/memory-firestore.mjs";
 class PracticeError extends Error {
   constructor(message, status) {
     super(message);
@@ -105,4 +106,45 @@ test("provider cooldowns expose a safe retry time and Retry-After header", async
   assert.equal(response.status, 429);
   assert.equal((await response.json()).retryAt, retryAt);
   assert.ok(Number(response.headers.get("Retry-After")) >= 179);
+});
+
+test("daily usage is authenticated, owner-scoped, read-only and never generates", async () => {
+  const day = new Date().toISOString().slice(0, 10);
+  const db = memoryFirestore({
+    [`users/authenticated/aiUsage/${day}`]: { count: 7 },
+    [`users/victim/aiUsage/${day}`]: { count: 19 },
+  });
+  let signedIn = true;
+  const route = loadBackend("src/app/api/ai/usage/route.ts", {
+    "@/lib/server/practice-persistence": {
+      PracticeError,
+      authenticatePractice: async () => {
+        if (!signedIn) throw new PracticeError("Sign in.", 401);
+        return { uid: "authenticated", db };
+      },
+    },
+  });
+  const before = JSON.stringify([...db.records]);
+  const response = await route.GET(
+    new Request("http://localhost/api/ai/usage"),
+  );
+  assert.equal(response.status, 200);
+  const { usage } = await response.json();
+  assert.equal(usage.used, 7);
+  assert.equal(usage.limit, 20);
+  assert.equal(usage.remaining, 13);
+  assert.equal(usage.resetsAt, Date.parse(`${day}T00:00:00Z`) + 86400000);
+  assert.equal(JSON.stringify([...db.records]), before);
+  assert.match(response.headers.get("Cache-Control"), /private, no-store/);
+  assert.equal(response.headers.get("Vary"), "Authorization");
+  assert.equal(
+    (await route.GET(new Request("http://localhost/api/ai/usage?uid=victim")))
+      .status,
+    400,
+  );
+  signedIn = false;
+  assert.equal(
+    (await route.GET(new Request("http://localhost/api/ai/usage"))).status,
+    401,
+  );
 });

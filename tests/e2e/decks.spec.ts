@@ -148,6 +148,27 @@ test("decks: topic import, stars, multiple destinations, edits, flashcards and o
       deck.locator("summary").filter({ hasText: "Difficulty 4" }),
     ).toHaveText("Biology · Difficulty 4 · Deck test packet");
     await expect(deck).toContainText("1 saved questions");
+    // Save-and-generate and saved-card controls share the account's allowance.
+    await deck.locator("summary").filter({ hasText: "Difficulty 4" }).click();
+    const allowances = deck.getByLabel("Daily AI usage", { exact: true });
+    await expect(allowances.first()).toContainText(
+      "0 / 20 used · 20 remaining",
+    );
+    const allowanceCount = await allowances.count();
+    expect(allowanceCount).toBeGreaterThan(1);
+    const dailyQuota = db.doc(
+      `users/${user.uid}/aiUsage/${new Date().toISOString().slice(0, 10)}`,
+    );
+    await dailyQuota.set({ count: 7 });
+    await allowances
+      .first()
+      .getByRole("button", { name: "Refresh AI allowance" })
+      .click();
+    for (let index = 0; index < allowanceCount; index++)
+      await expect(allowances.nth(index)).toContainText(
+        "7 / 20 used · 13 remaining",
+      );
+    await deck.locator("summary").filter({ hasText: "Difficulty 4" }).click();
     await deck.getByText("Export to Anki", { exact: true }).click();
     await deck.getByLabel("Export difficulty").selectOption("0");
     await expect(

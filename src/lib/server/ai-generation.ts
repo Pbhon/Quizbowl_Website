@@ -15,6 +15,7 @@ import { requireDeckEditor } from "./deck-permissions";
 import { generationState } from "@/lib/clues";
 import { GenerationError } from "./generation-error";
 import { generationLimits } from "./generation-limits";
+import { dailyGenerationUsage } from "./generation-usage";
 
 export async function savedClueStatus(
   db: Firestore,
@@ -35,10 +36,10 @@ export async function savedClueStatus(
     const data = saved.data()!;
     const question = (data.originalQuestion || data.question) as Question;
     const model = process.env.GEMINI_MODEL;
-    const day = new Date().toISOString().slice(0, 10);
+    const now = Date.now();
+    const day = new Date(now).toISOString().slice(0, 10);
     const used =
       (await tx.get(db.doc(`users/${uid}/aiUsage/${day}`))).data()?.count || 0;
-    const limit = generationLimits().student;
     const configured = Boolean(
       process.env.GEMINI_GENERATION_ENABLED === "true" &&
       process.env.GEMINI_API_KEY &&
@@ -51,12 +52,7 @@ export async function savedClueStatus(
         ).data()
       : undefined;
     return {
-      usage: {
-        used,
-        limit,
-        remaining: Math.max(0, limit - used),
-        resetsAt: Date.parse(`${day}T00:00:00Z`) + 86400000,
-      },
+      usage: dailyGenerationUsage(used, now),
       generation: generationState(
         cached ||
           data.generation ||

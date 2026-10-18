@@ -15,6 +15,7 @@ import { matchesCard, type StudyDeck, type SavedCard } from "@/lib/decks";
 import { DeckExport } from "./deck-export";
 import { GeneratedClues } from "./generated-clues";
 import { requestClues } from "@/lib/clue-client";
+import { GenerationAllowance } from "./generation-allowance";
 
 export async function deckRequest(
   user: User,
@@ -139,6 +140,7 @@ export function QuestionDeckActions({
   }
   return (
     <div className="space-y-3">
+      <GenerationAllowance user={user} />
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"

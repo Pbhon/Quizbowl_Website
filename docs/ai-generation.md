@@ -97,6 +97,16 @@ at 10 per minute per authenticated account. Daily application quotas reset at UT
 midnight, which may differ from Google's quota reset. Usage expires through the
 existing retention command; nothing installs a background cleanup service.
 
+The student's daily counter loads automatically beside every save-and-generate
+option and editable saved-card generation panel. All counters for the signed-in
+account share one read, refresh after successful and failed attempts, on returning
+to the tab, once per visible minute, and at the UTC reset. They show used, remaining,
+and the reset time. Reopening or reloading a page reads durable usage, not a new
+allowance. Cached clues remain usable when the personal limit is reached.
+`GET /api/ai/usage` is authenticated, read-only and returns only the caller's usage;
+it takes no account selector and has a separate 60/minute read bucket so displaying
+usage does not consume the generation request allowance.
+
 Errors hide raw provider details. Provider `Retry-After` is bounded to 60–3,600
 seconds; other generation failures cool down for one minute. Quota errors return
 the next application reset, and active leases return their expiry. Responses carry

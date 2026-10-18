@@ -38,6 +38,7 @@ export async function assertRequestSize(
 export function apiBucket(path: string, anonymous: boolean) {
   if (path === "/api/account/data") return { name: "account-data", limit: 3 };
   if (path === "/api/decks/export") return { name: "export", limit: 6 };
+  if (path === "/api/ai/usage") return { name: "ai-usage", limit: 60 };
   if (path.startsWith("/api/ai/")) return { name: "ai", limit: 10 };
   if (path === "/api/auth/admin-register") return { name: "signup", limit: 20 };
   if (path === "/api/practice/questions")

@@ -3,6 +3,18 @@ import assert from "node:assert/strict";
 import { loadBackend } from "./helpers/backend.mjs";
 import { memoryFirestore } from "./helpers/memory-firestore.mjs";
 const policy = loadBackend("src/lib/server/api-policy.ts");
+
+test("allowance reads do not consume the generation request bucket", async () => {
+  const db = memoryFirestore({}, true);
+  for (let index = 0; index < 12; index++)
+    await policy.enforceApiLimit(db, "one", "/api/ai/usage", 120000);
+  for (let index = 0; index < 10; index++)
+    await policy.enforceApiLimit(db, "one", "/api/ai/clues", 120000);
+  await assert.rejects(
+    policy.enforceApiLimit(db, "one", "/api/ai/clues", 120000),
+    { status: 429 },
+  );
+});
 test("durable API limits serialize concurrent instances, separate users and reset each minute", async () => {
   const db = memoryFirestore({}, true);
   const results = await Promise.allSettled(
