@@ -9,6 +9,7 @@ export const generationInstructions = [
   "Generate simple giveaway identifiers from the most recognizable defining fact or late clue. Ask one direct question. Label these simple. Do not invent a giveaway if the source has none.",
   "Generate intermediate identifiers from distinctive middle clues, relationships or named examples that require more familiarity than a giveaway. Label these intermediate. Keep the question answerable without surrounding clues.",
   "Generate complex early-buzzer identifiers from specialized, obscure opening facts. Label these complex. Preserve the precise relationship in the excerpt rather than making it easier with an unrelated giveaway. Cover each supported complexity when present; never fabricate missing levels.",
+  "Convert each individual fact into one complete flashcard front. Include the subject type and all context needed to answer independently, including bonus lead-in context when needed. Replace dangling pronouns with explicit descriptions without revealing the answer. Never refer to the previous question, above passage or another clue. Do not combine unrelated facts or put the answer in the front. Omit clues that cannot stand alone using the source alone.",
 ].join(" ");
 
 const schema = {

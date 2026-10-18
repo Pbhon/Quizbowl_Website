@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { loadBackend } from "./helpers/backend.mjs";
 const cache = loadBackend("src/lib/server/clue-cache.ts");
+const decks = loadBackend("src/lib/decks.ts");
 const question = {
   id: "source",
   type: "tossup",
@@ -105,5 +106,29 @@ test("flashcards reject context-dependent fronts and cosmetic duplicates", () =>
       [clue, { ...clue, clue: "NAME THE DOUBLE HELIX MOLECULE!" }],
       question,
     ),
+  );
+});
+
+test("each bonus clue reveals its own original official answer regardless of study edits", () => {
+  const original = {
+    ...question,
+    type: "bonus",
+    parts: ["Part one", "Part two"],
+    answerLines: [
+      "<b>DNA</b> [accept full name]",
+      "RNA [prompt on nucleic acid]",
+    ],
+  };
+  const card = {
+    originalQuestion: original,
+    question: { ...original, answerLines: ["wrong", "wrong"] },
+  };
+  assert.equal(
+    decks.identifierAnswer(card, { part: 0 }),
+    original.answerLines[0],
+  );
+  assert.equal(
+    decks.identifierAnswer(card, { part: 1 }),
+    original.answerLines[1],
   );
 });

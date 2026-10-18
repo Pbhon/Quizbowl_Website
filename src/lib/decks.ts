@@ -42,6 +42,10 @@ export type SavedCard = {
   notes: string;
   identifiers?: IdentifierCard[];
 };
+/** Generated cards always use the original official part answer, even after edits. */
+export function identifierAnswer(card: SavedCard, clue: IdentifierCard) {
+  return card.originalQuestion.answerLines[clue.part] || "";
+}
 export type StudyDeck = {
   teacherCurated?: boolean;
   id: string;
