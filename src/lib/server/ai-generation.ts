@@ -72,8 +72,13 @@ export async function generateSavedClues(
       minute,
     );
     const data = cached.data();
-    if (data?.status === "completed")
-      return validateClues(data.identifiers, question);
+    if (data?.status === "completed") {
+      try {
+        return validateClues(data.identifiers, question);
+      } catch {
+        // An obsolete or corrupt entry is a miss, never delivered to a student.
+      }
+    }
     if (
       (data?.status === "generating" && data.leaseUntil > now) ||
       data?.retryAt > now

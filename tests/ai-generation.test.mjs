@@ -175,3 +175,23 @@ test("deleting a saved card during generation never recreates it on delivery", a
   await assert.rejects(f.generate(), { status: 404 });
   assert.equal(f.db.records.has("users/one/decks/deck/questions/card"), false);
 });
+
+test("every request validates Firebase cache before quota; corrupt cache is repaired", async () => {
+  const f = fixture();
+  await f.generate();
+  const day = new Date().toISOString().slice(0, 10);
+  f.db.records.set(`users/one/aiUsage/${day}`, { count: 20 });
+  assert.equal((await f.generate()).cached, true);
+  assert.equal(f.calls(), 1);
+  const key = [...f.db.records.keys()].find((key) =>
+    key.startsWith("aiClueCache/"),
+  );
+  f.db.records.set(key, {
+    status: "completed",
+    identifiers: [{ ...clue, sourceExcerpt: "invented" }],
+  });
+  await assert.rejects(f.generate(), { status: 429 });
+  f.db.records.delete(`users/one/aiUsage/${day}`);
+  assert.equal((await f.generate()).cached, false);
+  assert.equal(f.calls(), 2);
+});
