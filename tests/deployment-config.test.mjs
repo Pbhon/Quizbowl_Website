@@ -64,6 +64,7 @@ test("enabled Gemini requires valid model/key/quotas; disabling it keeps core fe
     { GEMINI_API_KEY: "" },
     { GEMINI_MODEL: "../bad-model" },
     { GEMINI_STUDENT_DAILY_LIMIT: "0" },
+    { GEMINI_STUDENT_DAILY_LIMIT: "21" },
     { GEMINI_DEPLOYMENT_DAILY_LIMIT: "1001" },
   ]) {
     const issues = deploymentIssues({ ...enabled, ...change });

@@ -87,8 +87,8 @@ transactional quota reservation prevents simultaneous duplicate calls. Provider
 work has a 45-second timeout and a 128,000-byte response cap. Expired leases can
 be retried; networks and external providers cannot guarantee exactly-once billing.
 
-Default limits: 20 attempts per student per UTC day, 200 per deployment per UTC day,
-10 per deployment per minute. Configure private `GEMINI_STUDENT_DAILY_LIMIT` (1–100),
+Default limits: 20 attempts per student per UTC day, 400 per deployment per UTC day,
+10 per deployment per minute. Configure private `GEMINI_STUDENT_DAILY_LIMIT` (1–20),
 `GEMINI_DEPLOYMENT_DAILY_LIMIT` (1–1,000), and
 `GEMINI_DEPLOYMENT_MINUTE_LIMIT` (1–60) to fit the project's actual free-tier quota.
 Malformed configuration fails closed. Limits apply to regeneration too; failures

@@ -70,7 +70,7 @@ The shared content cache transitions generating → completed or failed. A 90-se
 lease with a unique fencing token prevents concurrent duplicate workers; expired
 leases can be recovered. Provider calls time out at 45 seconds. Failed attempts
 cool down for one minute; another explicit endpoint request retries. Daily limits
-are 20 attempts per user, 200 deployment-wide, and 10 per minute deployment-wide,
+are 20 attempts per user, 400 deployment-wide, and 10 per minute deployment-wide,
 reserved in the same transaction as the lease. Failures consume quota; cache hits
 do not. Usage records contain only counts and timestamps and expire after 32 days
 through the retention maintenance command. A lost worker may require a later retry;
@@ -78,8 +78,9 @@ an upstream service cannot guarantee exactly-once billing after network failure.
 
 Task 7 adds the saved-question controls, editable previews, exact evidence,
 read-only status/allowance checks and confirmed revision-based regeneration.
-Application quota defaults above can be lowered or raised within bounded private
-configuration; cached delivery remains available when provider calls are disabled.
+Application quotas can be lowered through private configuration; the personal
+limit cannot exceed 20 per day. Team limits remain configurable within bounds.
+Cached delivery remains available when provider calls are disabled.
 See [ai-generation.md](ai-generation.md) for free-tier setup, contracts and limits.
 No ordinary fetch, answer, export or answer-reveal path invokes generation.
 

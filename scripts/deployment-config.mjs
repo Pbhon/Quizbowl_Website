@@ -67,7 +67,7 @@ export function deploymentIssues(env, { local = false } = {}) {
     if (!/^[a-zA-Z0-9.-]{1,80}$/.test(env.GEMINI_MODEL || ""))
       issues.push("Enabled Gemini generation needs a valid GEMINI_MODEL.");
     for (const [name, max] of [
-      ["GEMINI_STUDENT_DAILY_LIMIT", 100],
+      ["GEMINI_STUDENT_DAILY_LIMIT", 20],
       ["GEMINI_DEPLOYMENT_DAILY_LIMIT", 1000],
       ["GEMINI_DEPLOYMENT_MINUTE_LIMIT", 60],
     ]) {

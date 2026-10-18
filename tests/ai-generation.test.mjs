@@ -170,6 +170,25 @@ test("durable daily quotas prevent provider calls and stale leases can recover",
   assert.equal(f.calls(), 2);
 });
 
+test("the 400th team attempt and 20th personal attempt are allowed, then new calls are blocked", async () => {
+  const f = fixture();
+  const day = new Date().toISOString().slice(0, 10);
+  f.db.records.set(`users/one/aiUsage/${day}`, { count: 19 });
+  f.db.records.set(`aiGenerationUsage/${day}`, { count: 399 });
+  await f.generate();
+  assert.equal(f.db.records.get(`aiGenerationUsage/${day}`).count, 400);
+  assert.equal((await f.status()).usage.remaining, 0);
+  // Force a new provider attempt rather than a free cache hit.
+  for (const key of f.db.records.keys())
+    if (key.startsWith("aiClueCache/")) f.db.records.delete(key);
+  await assert.rejects(f.generate(), { status: 429 });
+  await assert.rejects(f.generate("two"), { status: 429 });
+  assert.equal(f.calls(), 1);
+  f.db.records.set(`aiGenerationUsage/${day}`, { count: 0 });
+  await assert.rejects(f.generate(), { status: 429 });
+  assert.equal(f.calls(), 1);
+});
+
 test("deleting a saved card during generation never recreates it on delivery", async () => {
   let f;
   f = fixture(async () => {
@@ -362,7 +381,7 @@ test("configurable student quotas count failures, reset at UTC midnight and exem
   });
   await assert.rejects(failure.generate(), { status: 502 });
   assert.equal((await failure.status()).usage.remaining, 0);
-  for (const limit of ["0", "-1", "10000", "abc"]) {
+  for (const limit of ["0", "-1", "21", "10000", "abc"]) {
     const invalid = fixture(undefined, { GEMINI_STUDENT_DAILY_LIMIT: limit });
     await assert.rejects(invalid.generate(), { status: 503 });
     assert.equal(invalid.calls(), 0);

@@ -13,8 +13,8 @@ export function generationLimits() {
     return Number(raw);
   }
   return {
-    student: limit("GEMINI_STUDENT_DAILY_LIMIT", 20, 100),
-    daily: limit("GEMINI_DEPLOYMENT_DAILY_LIMIT", 200, 1000),
+    student: limit("GEMINI_STUDENT_DAILY_LIMIT", 20, 20),
+    daily: limit("GEMINI_DEPLOYMENT_DAILY_LIMIT", 400, 1000),
     minute: limit("GEMINI_DEPLOYMENT_MINUTE_LIMIT", 10, 60),
   };
 }
