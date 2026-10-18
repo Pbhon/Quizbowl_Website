@@ -65,3 +65,26 @@ test("editing changes only owned clue front and complexity; stable ID, evidence 
     status: 404,
   });
 });
+
+test("removing inaccurate clues keeps source and shared cache and detects stale edits", async () => {
+  const db = fixture();
+  await assert.rejects(
+    decks.mutateDeck(
+      db,
+      "owner",
+      { ...edit, action: "removeIdentifier", expectedClue: "stale" },
+      true,
+    ),
+    { status: 409 },
+  );
+  await decks.mutateDeck(
+    db,
+    "owner",
+    { ...edit, action: "removeIdentifier" },
+    true,
+  );
+  const saved = db.records.get("users/owner/decks/deck/questions/card");
+  assert.equal(saved.identifiers.length, 0);
+  assert.deepEqual(saved.originalQuestion, question);
+  assert.equal(db.records.get("aiClueCache/shared").identifiers.length, 1);
+});

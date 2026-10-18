@@ -133,6 +133,7 @@ function ClueEditor({
   refresh: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [front, setFront] = useState(clue.clue);
   const [complexity, setComplexity] = useState(clue.complexity);
   const [busy, setBusy] = useState(false);
@@ -160,11 +161,51 @@ function ClueEditor({
       setBusy(false);
     }
   }
+  async function remove() {
+    setBusy(true);
+    setError("");
+    try {
+      await editSavedClue(user, {
+        action: "removeIdentifier",
+        deckId,
+        cardId,
+        clueId: clue.id,
+        expectedClue: clue.clue,
+        expectedComplexity: clue.complexity,
+      });
+      refresh();
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "Please retry.");
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <div className="space-y-2">
       <Button variant="outline" onClick={() => setOpen(!open)}>
         Edit clue
       </Button>
+      <Button
+        variant="ghost"
+        disabled={busy}
+        onClick={() => setRemoving(!removing)}
+      >
+        Remove clue
+      </Button>
+      {removing && (
+        <div className="space-y-2">
+          <p>
+            Remove this clue from this deck? Other students’ cards and the
+            source question are kept.
+          </p>
+          <Button disabled={busy} onClick={() => void remove()}>
+            Confirm remove clue
+          </Button>
+          <Button variant="ghost" onClick={() => setRemoving(false)}>
+            Cancel removal
+          </Button>
+        </div>
+      )}
       {open && (
         <form className="space-y-2" onSubmit={(event) => void save(event)}>
           <label className="block text-sm">

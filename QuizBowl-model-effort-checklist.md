@@ -136,7 +136,7 @@ Questions stays private. No AI generation is added.
 - [x] **[High]** Include original source excerpts for verification
 - [x] **[Medium]** Classify clues by complexity
 - [x] **[Low]** Allow students to preview and edit generated cards
-- [ ] **[Low]** Allow students to remove inaccurate clues
+- [x] **[Low]** Allow students to remove inaccurate clues
 - [ ] **[High]** Cache generated clues for reuse across students
 - [ ] **[High]** Prevent simultaneous duplicate AI generation requests
 - [ ] **[Medium]** Track generation status: pending, generating, completed, failed
