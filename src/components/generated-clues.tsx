@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import type { User } from "firebase/auth";
 import type { SavedCard } from "@/lib/decks";
-import { identifierAnswer } from "@/lib/decks";
+import { identifierAnswer, complexityLabels } from "@/lib/decks";
 import { requestClues } from "@/lib/clue-client";
 import { Button } from "./ui/button";
 import { Notice } from "./form-field";
@@ -24,6 +24,7 @@ export function GeneratedClues({
   const lock = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [complexity, setComplexity] = useState("all");
   async function generate() {
     if (lock.current) return;
     lock.current = true;
@@ -41,34 +42,54 @@ export function GeneratedClues({
   }
   return (
     <section className="space-y-3" aria-label="AI identifier flashcards">
-      {card.identifiers?.map((clue, index) => (
-        <article
-          key={clue.id || index}
-          className="space-y-2 rounded-lg border p-3"
+      <label className="block text-sm">
+        Clue complexity
+        <select
+          className="form-select mt-1"
+          value={complexity}
+          onChange={(event) => setComplexity(event.target.value)}
         >
-          <p className="whitespace-pre-wrap break-words">{clue.clue}</p>
-          <details>
-            <summary className="cursor-pointer text-sm">
-              Reveal official answer
-            </summary>
-            <p className="whitespace-pre-wrap break-words">
-              {identifierAnswer(card, clue)}
-            </p>
-          </details>
-          <details>
-            <summary className="cursor-pointer text-sm">
-              Verify source excerpt
-            </summary>
-            <blockquote className="border-l-2 pl-3 whitespace-pre-wrap break-words">
-              {clue.sourceExcerpt}
-            </blockquote>
-            <p className="text-xs text-muted-foreground">
-              Part {clue.part + 1} ·{" "}
-              {card.originalQuestion.source || "QBReader database"}
-            </p>
-          </details>
-        </article>
-      ))}
+          <option value="all">All complexities</option>
+          {Object.entries(complexityLabels).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
+      {card.identifiers
+        ?.filter(
+          (clue) => complexity === "all" || clue.complexity === complexity,
+        )
+        .map((clue, index) => (
+          <article
+            key={clue.id || index}
+            className="space-y-2 rounded-lg border p-3"
+          >
+            <p className="whitespace-pre-wrap break-words">{clue.clue}</p>
+            <span className="badge">{complexityLabels[clue.complexity]}</span>
+            <details>
+              <summary className="cursor-pointer text-sm">
+                Reveal official answer
+              </summary>
+              <p className="whitespace-pre-wrap break-words">
+                {identifierAnswer(card, clue)}
+              </p>
+            </details>
+            <details>
+              <summary className="cursor-pointer text-sm">
+                Verify source excerpt
+              </summary>
+              <blockquote className="border-l-2 pl-3 whitespace-pre-wrap break-words">
+                {clue.sourceExcerpt}
+              </blockquote>
+              <p className="text-xs text-muted-foreground">
+                Part {clue.part + 1} ·{" "}
+                {card.originalQuestion.source || "QBReader database"}
+              </p>
+            </details>
+          </article>
+        ))}
       <p className="text-sm">
         AI identifier flashcards are optional. Generation sends this saved
         question and its official answers to Gemini. Check every clue before

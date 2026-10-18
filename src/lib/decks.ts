@@ -1,9 +1,15 @@
 import type { Question } from "./practice";
 
+export const complexityLabels = {
+  simple: "Giveaway (simple)",
+  intermediate: "Intermediate",
+  complex: "Early buzzer (complex)",
+} as const;
+
 export type IdentifierCard = {
   id?: string;
   clue: string;
-  complexity: "simple" | "intermediate" | "complex";
+  complexity: keyof typeof complexityLabels;
   part: number;
   sourceExcerpt: string;
 };
