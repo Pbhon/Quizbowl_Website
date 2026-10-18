@@ -62,3 +62,25 @@ test("intermediate identifiers retain a distinctive source clue and complexity",
   assert.equal(card.complexity, "intermediate");
   assert.equal(card.sourceExcerpt, "double helix");
 });
+
+test("complex early-buzzer identifiers preserve specialized opening evidence", () => {
+  const source = {
+    ...question,
+    parts: [
+      "Its B form has a major and minor groove. This molecule has a double helix.",
+    ],
+  };
+  const [card] = cache.validateClues(
+    [
+      {
+        clue: "Which molecule's B form has major and minor grooves?",
+        part: 0,
+        complexity: "complex",
+        sourceExcerpt: "Its B form has a major and minor groove.",
+      },
+    ],
+    source,
+  );
+  assert.equal(card.complexity, "complex");
+  assert.equal(card.part, 0);
+});
