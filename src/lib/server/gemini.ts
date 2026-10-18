@@ -64,7 +64,9 @@ export async function gemini(question: Question, model: string, key: string) {
         generationConfig: {
           temperature: 0.2,
           maxOutputTokens: 4096,
-          responseFormat: { text: { mimeType: "application/json", schema } },
+          // generateContent's TextResponseFormat uses an enum, unlike the
+          // Interactions API and the older responseMimeType string field.
+          responseFormat: { text: { mimeType: "APPLICATION_JSON", schema } },
         },
       }),
     },

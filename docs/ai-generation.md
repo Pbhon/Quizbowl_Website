@@ -6,7 +6,7 @@ server environment (locally `.env.local`, or your hosting provider's secrets):
 
 ```dotenv
 GEMINI_API_KEY=your-private-key
-GEMINI_MODEL=gemini-2.5-flash-lite
+GEMINI_MODEL=gemini-3.5-flash-lite
 GEMINI_GENERATION_ENABLED=true
 ```
 
@@ -23,6 +23,19 @@ Configuration stays server-side. A missing key, model or opt-in blocks new provi
 calls. With the same configured model, existing cache entries remain usable while
 provider generation is disabled.
 Tests mock the provider and never consume the live free tier.
+
+The 2026-10-18 deployment audit additionally verified one live generation from a
+synthetic saved question in the local Firestore emulator: three validated cards,
+followed by a cache replay with no second provider call. `generateContent` uses
+`responseFormat.text.mimeType: "APPLICATION_JSON"` (an enum, not a MIME string).
+The older 2.5 Flash-Lite model's metadata was readable but generation was unavailable
+to this new account; the configured 3.5 Flash-Lite model passed the real request.
+
+Provider eligibility must be checked before team rollout. The owner confirmed an
+18+ intended audience for this deployment. Google's current
+[Gemini API terms](https://ai.google.dev/gemini-api/terms) exclude API clients
+directed toward or likely accessed by people under 18; an adult account alone does
+not make a deployment for minors eligible.
 
 ## Student workflow
 

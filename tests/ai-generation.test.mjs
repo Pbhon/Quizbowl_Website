@@ -43,7 +43,7 @@ function fixture(fetcher, env = {}) {
         const body = JSON.parse(init.body);
         assert.equal(
           body.generationConfig.responseFormat.text.mimeType,
-          "application/json",
+          "APPLICATION_JSON",
         );
         assert.equal(
           body.generationConfig.responseFormat.text.schema.type,
