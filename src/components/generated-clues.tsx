@@ -1,0 +1,60 @@
+"use client";
+
+import { useRef, useState } from "react";
+import type { User } from "firebase/auth";
+import type { SavedCard } from "@/lib/decks";
+import { requestClues } from "@/lib/clue-client";
+import { Button } from "./ui/button";
+import { Notice } from "./form-field";
+
+export function GeneratedClues({
+  user,
+  deckId,
+  card,
+  canEdit,
+  refresh,
+}: {
+  user: User;
+  deckId: string;
+  card: SavedCard;
+  canEdit: boolean;
+  refresh: () => void;
+}) {
+  const lock = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function generate() {
+    if (lock.current) return;
+    lock.current = true;
+    setBusy(true);
+    setError("");
+    try {
+      await requestClues(user, deckId, card.id);
+      refresh();
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "Please retry.");
+    } finally {
+      lock.current = false;
+      setBusy(false);
+    }
+  }
+  return (
+    <section className="space-y-3" aria-label="AI identifier flashcards">
+      <p className="text-sm">
+        AI identifier flashcards are optional. Generation sends this saved
+        question and its official answers to Gemini. Check every clue before
+        studying.
+      </p>
+      {canEdit && (
+        <Button
+          variant="outline"
+          disabled={busy}
+          onClick={() => void generate()}
+        >
+          {busy ? "Generating clues…" : "Generate AI clues"}
+        </Button>
+      )}
+      {error && <Notice error>{error}</Notice>}
+    </section>
+  );
+}

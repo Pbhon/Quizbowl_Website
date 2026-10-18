@@ -280,7 +280,17 @@ export async function mutateDeck(
       });
       refs.forEach((ref) => tx.update(ref, { updatedAt: stamp() }));
     });
-    return { deckIds: refs.map((ref) => ref.id) };
+    return {
+      deckIds: refs.map((ref) => ref.id),
+      savedCards: refs.flatMap((ref) =>
+        questions.map((question) => ({
+          deckId: ref.id,
+          cardId: createHash("sha256")
+            .update(`${question.type}:${question.id}`)
+            .digest("hex"),
+        })),
+      ),
+    };
   }
   const ref = deckRef(db, uid, body.deckId);
   if (body.action === "delete") {

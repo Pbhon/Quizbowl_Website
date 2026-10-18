@@ -13,6 +13,8 @@ import { Card, CardContent } from "./ui/card";
 import { FormField, Notice } from "./form-field";
 import { matchesCard, type StudyDeck, type SavedCard } from "@/lib/decks";
 import { DeckExport } from "./deck-export";
+import { GeneratedClues } from "./generated-clues";
+import { requestClues } from "@/lib/clue-client";
 
 export async function deckRequest(
   user: User,
@@ -63,6 +65,7 @@ export function QuestionDeckActions({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [generateAfterSave, setGenerateAfterSave] = useState(false);
   const alive = useRef(true),
     lock = useRef(false);
   useEffect(() => {
@@ -103,16 +106,27 @@ export function QuestionDeckActions({
           setDecks(null);
         }
       }
-      await deckRequest(user, {
+      const saved = await deckRequest(user, {
         action: starring ? "star" : "save",
         ...source,
         deckIds: ids,
       });
+      let generationNotice = "";
+      if (generateAfterSave) {
+        try {
+          // Sequential requests let each destination reuse the shared cache.
+          for (const destination of saved.savedCards || [])
+            await requestClues(user, destination.deckId, destination.cardId);
+          generationNotice = " AI clues are ready to review in your decks.";
+        } catch (failure) {
+          generationNotice = ` Question saved; AI clues need attention: ${message(failure)} Open your deck to retry.`;
+        }
+      }
       if (alive.current) {
         setNotice(
-          starring
+          (starring
             ? "Saved to Starred Questions."
-            : "Question saved to your deck.",
+            : "Question saved to your deck.") + generationNotice,
         );
         setOpen(false);
       }
@@ -125,6 +139,15 @@ export function QuestionDeckActions({
   }
   return (
     <div className="space-y-3">
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={generateAfterSave}
+          disabled={busy}
+          onChange={(event) => setGenerateAfterSave(event.target.checked)}
+        />
+        Generate AI clues after saving (sends original question to Gemini)
+      </label>
       <div className="flex flex-wrap gap-2">
         {star && (
           <Button
@@ -1029,6 +1052,13 @@ function SavedCardPanel({
       <div className="mt-4 space-y-4">
         <QuestionFace question={card.question} />
         <QuestionFace question={card.question} answer />
+        <GeneratedClues
+          user={user}
+          deckId={deckId}
+          card={card}
+          canEdit={canEdit}
+          refresh={refresh}
+        />
         <p className="text-xs text-muted-foreground break-words">
           {card.question.source || "QBReader database"}
         </p>
