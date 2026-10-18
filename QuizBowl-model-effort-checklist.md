@@ -123,7 +123,7 @@ revocation, and deletion update the school directory atomically. Starred
 Questions stays private. No AI generation is added.
 
 ## 7. AI Identifier & Flashcard Generation
-- [ ] **[Medium]** Integrate Gemini API free tier
+- [x] **[Medium]** Integrate Gemini API free tier
 - [ ] **[High]** Trigger AI only when a question is starred or added to a deck
 - [ ] **[High]** Never call AI during ordinary question fetching or answering
 - [ ] **[High]** Never call AI just to reveal an existing answer line

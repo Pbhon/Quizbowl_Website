@@ -39,6 +39,19 @@ function fixture(fetcher, env = {}) {
       },
       fetch: async (url, init) => {
         calls++;
+        assert.match(url, /\/v1beta\/models\/test-model:generateContent$/);
+        const body = JSON.parse(init.body);
+        assert.equal(
+          body.generationConfig.responseFormat.text.mimeType,
+          "application/json",
+        );
+        assert.equal(
+          body.generationConfig.responseFormat.text.schema.type,
+          "array",
+        );
+        assert.equal(body.generationConfig.maxOutputTokens, 4096);
+        assert.equal(init.cache, "no-store");
+        assert.ok(init.signal instanceof AbortSignal);
         assert.equal(init.headers["x-goog-api-key"], "private-test-key");
         assert.ok(!url.includes("private-test-key"));
         assert.ok(!init.body.includes("private note"));
