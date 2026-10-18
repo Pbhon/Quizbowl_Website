@@ -8,6 +8,7 @@ import {
 } from "firebase-admin/firestore";
 import type { Question } from "@/lib/practice";
 import { savedIdentifiers, type StudyDeck } from "@/lib/decks";
+import { generationState } from "@/lib/clues";
 import { documentId, historyQuestion } from "./history";
 import { PracticeError } from "./practice-persistence";
 import {
@@ -142,6 +143,10 @@ function serializeDeck(
       originalQuestion: (saved.originalQuestion || saved.question) as Question,
       tags: saved.tags || [],
       notes: saved.notes || "",
+      generation: generationState(
+        saved.generation ||
+          (saved.identifiers ? { status: "completed" } : undefined),
+      ),
       identifiers: savedIdentifiers(
         saved.identifiers,
         saved.originalQuestion || saved.question,
@@ -276,6 +281,7 @@ export async function mutateDeck(
             tags: [],
             notes: "",
             savedAt: stamp(),
+            generation: { status: "pending" },
           });
       });
       refs.forEach((ref) => tx.update(ref, { updatedAt: stamp() }));

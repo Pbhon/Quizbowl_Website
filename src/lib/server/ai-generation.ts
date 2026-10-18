@@ -12,6 +12,48 @@ import { PracticeError } from "./practice-persistence";
 import { gemini } from "./gemini";
 import { documentId } from "./history";
 import { requireDeckEditor } from "./deck-permissions";
+import { generationState } from "@/lib/clues";
+
+export async function savedClueStatus(
+  db: Firestore,
+  uid: string,
+  deckId: unknown,
+  cardId: unknown,
+  verified: boolean,
+) {
+  if (!verified)
+    throw new PracticeError("Verify your email before generating clues.", 403);
+  const deck = db.doc(`users/${uid}/decks/${documentId(deckId)}`);
+  const card = deck.collection("questions").doc(documentId(cardId));
+  return db.runTransaction(async (tx) => {
+    const [parent, saved] = await tx.getAll(deck, card);
+    if (!parent.exists || !saved.exists)
+      throw new PracticeError("Saved card not found.", 404);
+    await requireDeckEditor(db, tx, uid, parent.data()!, verified);
+    const data = saved.data()!;
+    const question = (data.originalQuestion || data.question) as Question;
+    const model = process.env.GEMINI_MODEL;
+    const configured = Boolean(
+      process.env.GEMINI_GENERATION_ENABLED === "true" &&
+      process.env.GEMINI_API_KEY &&
+      model &&
+      /^[a-zA-Z0-9.-]{1,80}$/.test(model),
+    );
+    const cached = model
+      ? (
+          await tx.get(db.doc(`aiClueCache/${clueCacheKey(question, model)}`))
+        ).data()
+      : undefined;
+    return {
+      generation: generationState(
+        cached ||
+          data.generation ||
+          (data.identifiers ? { status: "completed" } : undefined),
+      ),
+      configured,
+    };
+  });
+}
 
 export async function generateSavedClues(
   db: Firestore,
@@ -115,6 +157,9 @@ export async function generateSavedClues(
       version: clueVersion,
       updatedAt: FieldValue.serverTimestamp(),
     });
+    tx.update(card, {
+      generation: { status: "generating", token, leaseUntil: now + 90000 },
+    });
     return null;
   });
   let identifiers = ready;
@@ -139,7 +184,8 @@ export async function generateSavedClues(
       });
     } catch (error) {
       await db.runTransaction(async (tx) => {
-        if ((await tx.get(cache)).data()?.token === token)
+        const [cached, currentCard] = await tx.getAll(cache, card);
+        if (cached.data()?.token === token) {
           tx.set(cache, {
             status: "failed",
             model,
@@ -147,6 +193,14 @@ export async function generateSavedClues(
             retryAt: Date.now() + 60000,
             updatedAt: FieldValue.serverTimestamp(),
           });
+          if (
+            currentCard.exists &&
+            currentCard.data()?.generation?.token === token
+          )
+            tx.update(card, {
+              generation: { status: "failed", retryAt: Date.now() + 60000 },
+            });
+        }
       });
       if (error instanceof PracticeError) throw error;
       throw new PracticeError(
@@ -161,12 +215,15 @@ export async function generateSavedClues(
     if (clueCacheKey(live, model) !== cacheKey)
       throw new PracticeError("Saved question changed. Retry.", 409);
     const current = (await tx.get(card)).data()!;
-    if (current.identifiersEdited === true)
+    if (current.identifiersEdited === true) {
+      tx.update(card, { generation: { status: "completed" } });
       return savedIdentifiers(current.identifiers, live);
+    }
     tx.update(card, {
       identifiers: saved,
       clueCacheKey: cacheKey,
       generatedAt: FieldValue.serverTimestamp(),
+      generation: { status: "completed" },
     });
     tx.update(deck, { updatedAt: FieldValue.serverTimestamp() });
     return saved;

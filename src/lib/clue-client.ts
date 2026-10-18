@@ -1,5 +1,23 @@
 import type { User } from "firebase/auth";
 
+export async function checkClueStatus(
+  user: User,
+  deckId: string,
+  cardId: string,
+) {
+  const response = await fetch(
+    `/api/ai/clues?${new URLSearchParams({ deckId, cardId })}`,
+    {
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${await user.getIdToken()}` },
+    },
+  );
+  const data = await response.json();
+  if (!response.ok)
+    throw new Error(data.error || "Generation status is unavailable.");
+  return data;
+}
+
 /** Generation is an explicit saved-question action, never a reader side effect. */
 export async function requestClues(user: User, deckId: string, cardId: string) {
   const response = await fetch("/api/ai/clues", {

@@ -1,4 +1,5 @@
 import type { Question } from "./practice";
+import type { GenerationState } from "./clues";
 
 export const complexityLabels = {
   simple: "Giveaway (simple)",
@@ -47,6 +48,7 @@ export type SavedCard = {
   tags: string[];
   notes: string;
   identifiers?: IdentifierCard[];
+  generation?: GenerationState;
 };
 /** Generated cards always use the original official part answer, even after edits. */
 export function identifierAnswer(card: SavedCard, clue: IdentifierCard) {

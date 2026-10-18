@@ -4,7 +4,12 @@ import { useRef, useState } from "react";
 import type { User } from "firebase/auth";
 import type { SavedCard, IdentifierCard } from "@/lib/decks";
 import { identifierAnswer, complexityLabels } from "@/lib/decks";
-import { requestClues, editSavedClue } from "@/lib/clue-client";
+import {
+  requestClues,
+  editSavedClue,
+  checkClueStatus,
+} from "@/lib/clue-client";
+import type { GenerationState } from "@/lib/clues";
 import { Button } from "./ui/button";
 import { Notice } from "./form-field";
 
@@ -25,15 +30,31 @@ export function GeneratedClues({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [complexity, setComplexity] = useState("all");
+  const [state, setState] = useState<GenerationState>(
+    card.generation || {
+      status: card.identifiers?.length ? "completed" : "pending",
+    },
+  );
+  async function checkStatus() {
+    setError("");
+    try {
+      setState((await checkClueStatus(user, deckId, card.id)).generation);
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "Please retry.");
+    }
+  }
   async function generate() {
     if (lock.current) return;
     lock.current = true;
     setBusy(true);
+    setState({ status: "generating" });
     setError("");
     try {
       await requestClues(user, deckId, card.id);
+      setState({ status: "completed" });
       refresh();
     } catch (failure) {
+      setState({ status: "failed" });
       setError(failure instanceof Error ? failure.message : "Please retry.");
     } finally {
       lock.current = false;
@@ -42,6 +63,19 @@ export function GeneratedClues({
   }
   return (
     <section className="space-y-3" aria-label="AI identifier flashcards">
+      <p role="status" className="text-sm">
+        Generation status: {state.status}
+        {state.status === "pending" && " — waiting for your request"}
+      </p>
+      {canEdit && (
+        <Button
+          variant="ghost"
+          disabled={busy}
+          onClick={() => void checkStatus()}
+        >
+          Check generation status
+        </Button>
+      )}
       <label className="block text-sm">
         Clue complexity
         <select

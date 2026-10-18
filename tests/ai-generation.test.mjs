@@ -89,6 +89,8 @@ function fixture(fetcher, env = {}) {
     calls: () => calls,
     generate: (uid = "one", verified = true, deck = "deck") =>
       server.generateSavedClues(db, uid, deck, "card", verified),
+    status: (uid = "one") =>
+      server.savedClueStatus(db, uid, "deck", "card", true),
   };
 }
 test("generation requires verified ownership and explicit configuration before any provider call", async () => {
@@ -258,4 +260,30 @@ test("a fenced worker cannot overwrite a replacement cache or mark it failed", a
     f.db.records.get("users/one/decks/deck/questions/card").identifiers,
     undefined,
   );
+});
+
+test("saved status is read-only, owner-scoped and exposes all lifecycle states without fencing tokens", async () => {
+  let f;
+  f = fixture(async () => {
+    const status = await f.status();
+    assert.equal(status.generation.status, "generating");
+    assert.ok(!JSON.stringify(status).includes("token"));
+    return Response.json({
+      candidates: [
+        {
+          finishReason: "STOP",
+          content: { parts: [{ text: JSON.stringify([clue]) }] },
+        },
+      ],
+    });
+  });
+  assert.equal((await f.status()).generation.status, "pending");
+  assert.equal(f.calls(), 0);
+  await assert.rejects(f.status("victim"), { status: 404 });
+  await f.generate();
+  assert.equal((await f.status()).generation.status, "completed");
+  const failure = fixture(() => new Response("private", { status: 429 }));
+  await assert.rejects(failure.generate(), { status: 429 });
+  assert.equal((await failure.status()).generation.status, "failed");
+  assert.ok((await failure.status()).generation.retryAt > Date.now());
 });

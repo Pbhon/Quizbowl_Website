@@ -3,10 +3,46 @@ import {
   authenticatePractice,
   PracticeError,
 } from "@/lib/server/practice-persistence";
-import { generateSavedClues } from "@/lib/server/ai-generation";
+import {
+  generateSavedClues,
+  savedClueStatus,
+} from "@/lib/server/ai-generation";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 const headers = { "Cache-Control": "private, no-store", Vary: "Authorization" };
+export async function GET(request: Request) {
+  try {
+    const account = (await authenticatePractice(request))!;
+    const params = new URL(request.url).searchParams;
+    if (
+      [...params.keys()].some((key) => !["deckId", "cardId"].includes(key)) ||
+      params.getAll("deckId").length !== 1 ||
+      params.getAll("cardId").length !== 1
+    )
+      throw new PracticeError("Choose a saved deck and card.", 400);
+    const user = await getFirebaseAdmin().auth.getUser(account.uid);
+    return Response.json(
+      await savedClueStatus(
+        account.db,
+        account.uid,
+        params.get("deckId"),
+        params.get("cardId"),
+        user.emailVerified,
+      ),
+      { headers },
+    );
+  } catch (error) {
+    return Response.json(
+      {
+        error:
+          error instanceof PracticeError
+            ? error.message
+            : "Generation status is unavailable.",
+      },
+      { status: error instanceof PracticeError ? error.status : 503, headers },
+    );
+  }
+}
 export async function POST(request: Request) {
   try {
     const account = (await authenticatePractice(request))!;
