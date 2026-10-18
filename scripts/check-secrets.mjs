@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { credentialIndicators } from "./secret-patterns.mjs";
 const files = execFileSync(
   "git",
   [
@@ -22,10 +23,7 @@ for (const file of files) {
     failures.push(`${file}: private configuration must not be tracked`);
   if (!/\.(?:ts|tsx|js|mjs|json|md|example)$/.test(file)) continue;
   const source = readFileSync(path.resolve(file), "utf8");
-  if (
-    /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/.test(source) ||
-    /AIza[0-9A-Za-z_-]{35}/.test(source)
-  )
+  if (credentialIndicators(source).length)
     failures.push(`${file}: possible embedded credential`);
   if (
     /NEXT_PUBLIC_(?:GEMINI|GOOGLE_APPLICATION_CREDENTIALS|FIREBASE_ADMIN|ADMIN_SIGNUP_CODE)/.test(
