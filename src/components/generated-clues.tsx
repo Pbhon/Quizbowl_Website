@@ -2,9 +2,9 @@
 
 import { useRef, useState } from "react";
 import type { User } from "firebase/auth";
-import type { SavedCard } from "@/lib/decks";
+import type { SavedCard, IdentifierCard } from "@/lib/decks";
 import { identifierAnswer, complexityLabels } from "@/lib/decks";
-import { requestClues } from "@/lib/clue-client";
+import { requestClues, editSavedClue } from "@/lib/clue-client";
 import { Button } from "./ui/button";
 import { Notice } from "./form-field";
 
@@ -88,6 +88,16 @@ export function GeneratedClues({
                 {card.originalQuestion.source || "QBReader database"}
               </p>
             </details>
+            {canEdit && clue.id && (
+              <ClueEditor
+                key={JSON.stringify(clue)}
+                user={user}
+                deckId={deckId}
+                cardId={card.id}
+                clue={clue}
+                refresh={refresh}
+              />
+            )}
           </article>
         ))}
       <p className="text-sm">
@@ -106,5 +116,95 @@ export function GeneratedClues({
       )}
       {error && <Notice error>{error}</Notice>}
     </section>
+  );
+}
+
+function ClueEditor({
+  user,
+  deckId,
+  cardId,
+  clue,
+  refresh,
+}: {
+  user: User;
+  deckId: string;
+  cardId: string;
+  clue: IdentifierCard;
+  refresh: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [front, setFront] = useState(clue.clue);
+  const [complexity, setComplexity] = useState(clue.complexity);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function save(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await editSavedClue(user, {
+        action: "editIdentifier",
+        deckId,
+        cardId,
+        clueId: clue.id,
+        expectedClue: clue.clue,
+        expectedComplexity: clue.complexity,
+        clue: front,
+        complexity,
+      });
+      setOpen(false);
+      refresh();
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "Please retry.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="space-y-2">
+      <Button variant="outline" onClick={() => setOpen(!open)}>
+        Edit clue
+      </Button>
+      {open && (
+        <form className="space-y-2" onSubmit={(event) => void save(event)}>
+          <label className="block text-sm">
+            Flashcard front
+            <textarea
+              className="form-select mt-1"
+              value={front}
+              onChange={(event) => setFront(event.target.value)}
+              required
+              maxLength={1000}
+            />
+          </label>
+          <label className="block text-sm">
+            Edited clue complexity
+            <select
+              className="form-select mt-1"
+              value={complexity}
+              onChange={(event) =>
+                setComplexity(
+                  event.target.value as IdentifierCard["complexity"],
+                )
+              }
+            >
+              {Object.entries(complexityLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="text-xs">
+            Your edit applies to this deck. The official answer and source
+            excerpt stay attached.
+          </p>
+          <Button disabled={busy} type="submit">
+            Save clue changes
+          </Button>
+        </form>
+      )}
+      {error && <Notice error>{error}</Notice>}
+    </div>
   );
 }

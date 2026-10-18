@@ -360,6 +360,44 @@ export async function mutateDeck(
         updatedAt: stamp(),
       });
       writeAudience(db, tx, uid, ref.id, audience, deck.data()!);
+    } else if (body.action === "editIdentifier") {
+      const cardRef = ref.collection("questions").doc(documentId(body.cardId));
+      const card = await tx.get(cardRef);
+      if (!card.exists) throw new PracticeError("Saved card not found.", 404);
+      const data = card.data()!;
+      const identifiers = savedIdentifiers(
+        data.identifiers,
+        data.originalQuestion || data.question,
+      );
+      const index = identifiers.findIndex(
+        (clue) => clue.id === documentId(body.clueId),
+      );
+      if (index < 0)
+        throw new PracticeError("Clue not found. Reload your deck.", 404);
+      const current = identifiers[index];
+      if (
+        body.expectedClue !== current.clue ||
+        body.expectedComplexity !== current.complexity
+      )
+        throw new PracticeError(
+          "Clue changed. Reload your deck before editing.",
+          409,
+        );
+      if (
+        !["simple", "intermediate", "complex"].includes(String(body.complexity))
+      )
+        throw new PracticeError("Choose a clue complexity.", 400);
+      identifiers[index] = {
+        ...current,
+        clue: deckText(body.clue, 1000, true),
+        complexity: body.complexity as typeof current.complexity,
+      };
+      tx.update(cardRef, {
+        identifiers,
+        identifiersEdited: true,
+        updatedAt: stamp(),
+      });
+      tx.update(ref, { updatedAt: stamp() });
     } else if (body.action === "editCard" || body.action === "removeCard") {
       const cardRef = ref.collection("questions").doc(documentId(body.cardId));
       const card = await tx.get(cardRef);

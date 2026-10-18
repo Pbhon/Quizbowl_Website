@@ -135,7 +135,7 @@ Questions stays private. No AI generation is added.
 - [x] **[High]** Preserve the official QBReader answer line for each clue
 - [x] **[High]** Include original source excerpts for verification
 - [x] **[Medium]** Classify clues by complexity
-- [ ] **[Low]** Allow students to preview and edit generated cards
+- [x] **[Low]** Allow students to preview and edit generated cards
 - [ ] **[Low]** Allow students to remove inaccurate clues
 - [ ] **[High]** Cache generated clues for reuse across students
 - [ ] **[High]** Prevent simultaneous duplicate AI generation requests
