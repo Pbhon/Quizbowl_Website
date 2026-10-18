@@ -46,3 +46,19 @@ test("generated clues require real excerpts and valid part bindings; model answe
   ])
     assert.throws(() => cache.validateClues(value, question));
 });
+
+test("intermediate identifiers retain a distinctive source clue and complexity", () => {
+  const [card] = cache.validateClues(
+    [
+      {
+        clue: "Which molecule has a double helix?",
+        part: 0,
+        complexity: "intermediate",
+        sourceExcerpt: "double helix",
+      },
+    ],
+    question,
+  );
+  assert.equal(card.complexity, "intermediate");
+  assert.equal(card.sourceExcerpt, "double helix");
+});

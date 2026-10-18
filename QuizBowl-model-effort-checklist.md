@@ -129,7 +129,7 @@ Questions stays private. No AI generation is added.
 - [x] **[High]** Never call AI just to reveal an existing answer line
 - [x] **[High]** Check Firebase cache before every AI generation
 - [x] **[Medium]** Generate simple/giveaway identifiers
-- [ ] **[Medium]** Generate intermediate identifiers
+- [x] **[Medium]** Generate intermediate identifiers
 - [ ] **[Medium]** Generate complex/early-buzzer identifiers
 - [ ] **[High]** Convert individual clues into self-contained flashcards
 - [ ] **[High]** Preserve the official QBReader answer line for each clue
